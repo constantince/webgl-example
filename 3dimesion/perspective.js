@@ -29,6 +29,8 @@ var FRAGMENT_SHADER = `
 function main() {
     initShaders(gl, VERTEX_SHADER, FRAGMENT_SHADER);
     var number = initVertexBuffers();
+    gl.enable(gl.DEPTH_TEST);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     initMatrix();
     // initTranlate(0.75);
     // initTranlate(-0.75);
@@ -39,18 +41,21 @@ function main() {
 function initVertexBuffers() {
     var n = 18;
     var vertexs = new Float32Array([
+        0.0,  1.0,   0.0,  0.4,  0.4,  1.0,  // The front blue one 
+        -0.5, -1.0,   0.0,  0.4,  0.4,  1.0,
+        0.5, -1.0,   0.0,  1.0,  0.4,  0.4, 
+
+        0.0,  1.0,  -2.0,  1.0,  1.0,  0.4, // The middle yellow one
+        -0.5, -1.0,  -2.0,  1.0,  1.0,  0.4,
+        0.5, -1.0,  -2.0,  1.0,  0.4,  0.4, 
         // Vertex coordinates and color
         0.0,  1.0,  -4.0,  0.4,  1.0,  0.4, // The back green one
         -0.5, -1.0,  -4.0,  0.4,  1.0,  0.4,
         0.5, -1.0,  -4.0,  1.0,  0.4,  0.4, 
 
-        0.0,  1.0,  -2.0,  1.0,  1.0,  0.4, // The middle yellow one
-        -0.5, -1.0,  -2.0,  1.0,  1.0,  0.4,
-        0.5, -1.0,  -2.0,  1.0,  0.4,  0.4, 
+       
 
-        0.0,  1.0,   0.0,  0.4,  0.4,  1.0,  // The front blue one 
-        -0.5, -1.0,   0.0,  0.4,  0.4,  1.0,
-        0.5, -1.0,   0.0,  1.0,  0.4,  0.4, 
+       
     ]);
 
     var size = vertexs.BYTES_PER_ELEMENT;
