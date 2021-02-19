@@ -27,7 +27,7 @@ function main() {
     initMatrix();
     var number = initVertexBuffer();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawElements(gl.TRIANGLES, number, gl.UNSIGNED_BYTE, 0)
+    gl.drawElements(gl.TRIANGLES, number, gl.UNSIGNED_BYTE, 0);
 }
 
 
