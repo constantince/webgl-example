@@ -4,11 +4,21 @@ var gl = canvas.getContext("webgl");
 var VertexSharder = `
     attribute vec4 a_Position;
     attribute vec4 a_Color;
+    attribute vec4 a_Normal;
     uniform mat4 u_MvpMatrix;
+    uniform vec3 u_LightColor;
+    uniform vec3 u_LightDirection;
     varying vec4 v_Color;
+    uniform vec3 u_EnvLight;
     void main() {
         gl_Position = u_MvpMatrix * a_Position;
-        v_Color = a_Color;
+        vec3 normal = normalize(a_Normal.xyz);
+        float nDot = max(dot(u_LightDirection, normal), 0.0);
+
+        vec3 env = u_EnvLight * a_Color.rgb;
+
+        vec3 diffuse = u_LightColor * a_Color.rbg * nDot;
+        v_Color = vec4(diffuse + env, a_Color.a);
     }
 `;
 
@@ -63,9 +73,23 @@ function initVertexBuffer() {
        20,21,22,  20,22,23     // back
      ]);
 
+
+    var normals = new Float32Array([    // Normal
+        0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,  // v0-v1-v2-v3 front
+        1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,  // v0-v3-v4-v5 right
+        0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,  // v0-v5-v6-v1 up
+       -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  // v1-v6-v7-v2 left
+        0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,  // v7-v4-v3-v2 down
+        0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0   // v4-v7-v6-v5 back
+    ]);
+
     shaderPointer("a_Position", vertexs);
 
     shaderPointer("a_Color", color);
+
+    needLight();
+
+    shaderPointer("a_Normal", normals);
 
     var bufferIndexPointer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferIndexPointer);
@@ -73,6 +97,22 @@ function initVertexBuffer() {
 
     return indices.length;
 };
+
+function needLight() {
+    var a_LightColor = gl.getUniformLocation(gl.program, 'u_LightColor');
+    var a_LightDirection = gl.getUniformLocation(gl.program, "u_LightDirection");
+    var u_EnvLight = gl.getUniformLocation(gl.program, "u_EnvLight");
+
+    gl.uniform3f(a_LightColor, 1.0, 1.0, 1.0);
+
+    var directions = new Vector3([0.5, 3.0, 4.0]);
+
+    directions.normalize();
+
+    gl.uniform3fv(a_LightDirection, directions.elements);
+
+    gl.uniform3f(u_EnvLight, 0.2, 0.2, 0,2);
+}
 
 function initMatrix() {
     var Ma = new Matrix4();
