@@ -68,13 +68,13 @@ function setAttrib(webgl, name, arr) {
     gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
     
     var a_Attrib = gl.getAttribLocation(gl.program, name);
-    gl.vertexAttribPointer(gl.ARRAY_DRAWS, 3, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(a_Attrib, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(a_Attrib)
 }
 
-function initMatrix() {
+function initMatrix(gl) {
     var Matrix = new Matrix4();
-    Matrix.setPerspective(30, 1, 1, 100).lookAt(3, 3, 7, 0, 0, 0, 0, 1, 0);
+    Matrix.setPerspective(30, 1, 1, 100).lookAt(3, 3, 7, 0, 0, 0, 0, 1, 0);;
 
     var mtx = gl.getUniformLocation(gl.program, "u_MvpMatrix");
     gl.uniformMatrix4fv(mtx, false, Matrix.elements);
@@ -86,9 +86,11 @@ function main() {
     var gl = canvas.getContext("webgl");
     
     initShaders(gl, vertextSharder, fragmentSharder);
-    gl.clearColor(0, 0, 0, 1.0);
+    initMatrix(gl);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.enable(gl.DEPTH_TEST);
     var number = initBuffer(gl);
-    initMatrix();
+   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawElements(gl.TRIANGLES, number, gl.UNSIGNED_BYE, 0)
+    gl.drawElements(gl.TRIANGLES, number, gl.UNSIGNED_BYTE, 0)
 }
