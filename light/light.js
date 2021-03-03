@@ -36,8 +36,30 @@ function main() {
     initShaders(gl, VertexSharder, FragSharder);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
-    initMatrix();
+    var Ma = new Matrix4();
+    Ma.setPerspective(30, 1, 1, 100).lookAt(3, 3, 7, 0, 0, 0, 0, 1, 0);
+    
+    // var Modal = gl.getUniformLocation(gl.program, "u_MvpMatrix");
     const n = initVertexBuffer();
+
+
+    var currentAngle = [0.0, 0.0];
+    initEvent(currentAngle);
+
+    var tick = function() {
+        draw(Ma, currentAngle)
+        requestAnimationFrame(tick);
+    }
+    tick();
+
+   
+}
+var g_mvp = new Matrix4();
+function draw(view, angles) {
+    g_mvp.set(view);
+    g_mvp.rotate(angles[0], 1.0, 0.0, 0.0);
+    g_mvp.rotate(angles[1], 0.0, 1.0, 0.0);
+    gl.uniformMatrix4fv(view, false, g_mvp.elements);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0)
 }
@@ -131,4 +153,30 @@ function shaderPointer(name, vertexs) {
     var a_sharder = gl.getAttribLocation(gl.program, name);
     gl.vertexAttribPointer(a_sharder, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(a_sharder);
+}
+
+function initEvent(angles) {
+    var touching = false, lastX = -1, lastY = -1;
+    document.onmousedown = function(e) {
+        lastX = e.clientX;
+        lastY = e.clientY;
+        touching = true;
+    }
+
+    document.onmouseup = function() {
+        touching = false;
+    }
+
+    document.onmousemove = function() {
+        var x = e.clientX;
+        var y = e.clientY;
+        if(touching === true) {
+            var factor = 100 / 500;
+            var dx = factor * (x - lastX);
+            var dy = factor * (y - lastY);
+            angles[0] = Math.max(Math.min(angles[0] + dy, 90.0), -90.0);
+            angles[1] = angles[1] + dx;
+        }
+    }
+
 }

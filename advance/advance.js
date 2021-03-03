@@ -41,10 +41,59 @@ function main(tran = 1) {
     initShaders(gl, VertexSharder, FragSharder);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
-    initMatrix(tran);
+    let {V, M} = initMatrix(tran);
     const n = initVertexBuffer();
+    
+    var angle = [0.0, 0.0];
+
+    initEvent(angle, canvas);
+
+    function tick() {
+        draw(V, M, n, angle)
+        requestAnimationFrame(tick);
+    }
+    
+    tick();
+}
+var g_v = new Matrix4()
+
+function initEvent(angles, canvas) {
+    var touching = false, lastX = -1, lastY = -1;
+    canvas.onmousedown = function(e) {
+        lastX = e.clientX;
+        lastY = e.clientY;
+        touching = true;
+    }
+
+    canvas.onmouseup = function() {
+        touching = false;
+    }
+
+    canvas.onmousemove = function(e) {
+        var x = e.clientX;
+        var y = e.clientY;
+        if(touching === true) {
+            var factor = 100 / canvas.height;
+            var dx = factor * (x - lastX);
+            var dy = factor * (y - lastY);
+            angles[0] = Math.max(Math.min(angles[0] + dy, 90.0), -90.0);
+            angles[1] = angles[1] + dx;
+        }
+        lastX = x, lastY = y;
+    }
+
+}
+
+
+function draw(V, M, N, A) {
+
+    g_v.set(V);
+    g_v.rotate(A[0], 1.0, 0.0, 0.0);
+    g_v.rotate(A[1], 0.0, 1.0, 0.0);
+    gl.uniformMatrix4fv(M, false, g_v.elements);
+
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0)
+    gl.drawElements(gl.TRIANGLES, N, gl.UNSIGNED_BYTE, 0)
 }
 
 function initVertexBuffer() {
@@ -132,9 +181,13 @@ function initMatrix(m) {
 
 
     
-    Ma.setPerspective(30, 1, 1, 100).lookAt(1, 3, 7, 0, 0, 0, m, 1, 0).multiply(Modals);
+    Ma.setPerspective(30, 1, 1, 100).lookAt(3, 3, 7, 0, 0, 0, m, 1, 0).multiply(Modals);
     var Modal = gl.getUniformLocation(gl.program, "u_MvpMatrix");
-    gl.uniformMatrix4fv(Modal, false, Ma.elements);
+
+    return {
+        V: Ma,
+        M: Modal
+    }
 
 }
 
