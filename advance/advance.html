@@ -12,4 +12,10 @@
 <script src="../WebGL_Guide_Code/lib/cuon-utils.js"></script>
 <script src="../WebGL_Guide_Code/lib/cuon-matrix.js"></script>
 <script src="./pick_single_face.js"></script>
+<script type="x-shader/x-fragment">
+    attribute vec4 a_Position;
+    void main() {
+        gl_Position = a_Position;
+    }
+</script>
 </html>

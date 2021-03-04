@@ -72,6 +72,7 @@ function main(tran = 1) {
         gl.uniform1i(u_PickedFace, face);
         draw(n);
     }
+
 }
 
 
@@ -81,6 +82,7 @@ function chekcFace(x, y, u_PickedFace, n) {
     gl.uniform1i(u_PickedFace, 0);
     draw(n);
     gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    console.log(pixel)
     return pixel[3];
 
 }
