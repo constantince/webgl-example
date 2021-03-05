@@ -179,7 +179,7 @@ function draw(gl, n, currentAngle, viewProjMatrix, u_MvpMatrix) {
   g_MvpMatrix.set(viewProjMatrix);
   g_MvpMatrix.rotate(currentAngle, 1.0, 0.0, 0.0); // Rotate appropriately
   g_MvpMatrix.rotate(currentAngle, 0.0, 1.0, 0.0);
-  g_MvpMatrix.rotate(currentAngle, 0.0, 0.0, 1.0);
+  g_MvpMatrix.rotate(currentAngle, 1.0, 0.0, 1.0);
   gl.uniformMatrix4fv(u_MvpMatrix, false, g_MvpMatrix.elements);
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);     // Clear buffers
