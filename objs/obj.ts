@@ -40,7 +40,6 @@ const initShader = (v: string, f: string) => {
     const pro = webgl.createProgram();
     webgl.attachShader(pro, vertexShader);
     webgl.attachShader(pro, fragmentShader);
-    
     webgl.linkProgram(pro);
     
     if (!webgl.getProgramParameter(pro, webgl.LINK_STATUS)) {
@@ -58,9 +57,6 @@ const initShader = (v: string, f: string) => {
     
 
 }
-
-
-
 
 const initBuffer = (gl: any, pro: any): number => {
 
