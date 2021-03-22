@@ -162,19 +162,26 @@ function initVertexBuffers(gl, viewProjMatrix, u_MvpMatrix, currentAngle) {
   // Unbind the buffer object
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
+  var unity = [
+    {img: './brick.jpg', pointer: [ 0, 1, 2,   0, 2, 3]},
+    {img: './sky.jpg', pointer: [ 4, 5, 6,   4, 6, 7]},
+    {img: './js.jpg', pointer: [ 8, 9,10,   8,10,11]},
+    {img: './python.png', pointer: [ 12,13,14,  12,14,15]},
+    {img: './brick1.png', pointer: [ 16,17,18,  16,18,19]},
+    {img: './css.jpeg', pointer: [ 20,21,22,  20,22,23 ]}
+  ]
 
+  
   // var drawed = false;
   var tick = function() {   // Start drawing
-    initIndex('./brick.jpg', gl, [ 0, 1, 2,   0, 2, 3], viewProjMatrix, u_MvpMatrix, currentAngle);
-    initIndex('./sky.jpg', gl, [ 4, 5, 6,   4, 6, 7], viewProjMatrix, u_MvpMatrix, currentAngle);
-    initIndex("./js.jpg",gl, [ 8, 9,10,   8,10,11], viewProjMatrix, u_MvpMatrix, currentAngle);
-    initIndex("./python.png", gl, [ 12,13,14,  12,14,15], viewProjMatrix, u_MvpMatrix, currentAngle);
-    initIndex("./brick1.png", gl, [ 16,17,18,  16,18,19], viewProjMatrix, u_MvpMatrix, currentAngle);
-    initIndex("./css.jpeg", gl, [ 20,21,22,  20,22,23 ], viewProjMatrix, u_MvpMatrix, currentAngle);
+    for (let index = 0; index < unity.length; index++) {
+      const element = unity[index];
+      initIndex(element.img, gl, element.pointer, viewProjMatrix, u_MvpMatrix, currentAngle);
+    }
     
     // draw(gl, 6, viewProjMatrix, u_MvpMatrix, currentAngle);
     // setTimeout(function() {
-      requestAnimationFrame(tick);
+    requestAnimationFrame(tick);
     // }, 2000)
    
 
