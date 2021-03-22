@@ -163,39 +163,40 @@ function initVertexBuffers(gl, viewProjMatrix, u_MvpMatrix, currentAngle) {
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
   var unity = [
-    {img: './brick.jpg', pointer: [ 0, 1, 2,   0, 2, 3]},
-    {img: './sky.jpg', pointer: [ 4, 5, 6,   4, 6, 7]},
-    {img: './js.jpg', pointer: [ 8, 9,10,   8,10,11]},
-    {img: './python.png', pointer: [ 12,13,14,  12,14,15]},
-    {img: './brick1.png', pointer: [ 16,17,18,  16,18,19]},
-    {img: './css.jpeg', pointer: [ 20,21,22,  20,22,23 ]}
+    {image: './brick.jpg', pointer: [ 0, 1, 2,   0, 2, 3]},
+    {image: './sky.jpg', pointer: [ 4, 5, 6,   4, 6, 7]},
+    {image: './js.jpg', pointer: [ 8, 9,10,   8,10,11]},
+    {image: './python.png', pointer: [ 12,13,14,  12,14,15]},
+    {image: './brick1.png', pointer: [ 16,17,18,  16,18,19]},
+    {image: './css.jpeg', pointer: [ 20,21,22,  20,22,23 ]}
   ]
-
   
-  // var drawed = false;
-  var tick = function() {   // Start drawing
-    for (let index = 0; index < unity.length; index++) {
-      const element = unity[index];
-      initIndex(element.img, gl, element.pointer, viewProjMatrix, u_MvpMatrix, currentAngle);
-    }
-    
-    // draw(gl, 6, viewProjMatrix, u_MvpMatrix, currentAngle);
-    // setTimeout(function() {
-    requestAnimationFrame(tick);
-    // }, 2000)
-   
-
-  };
-  tick();
   
-
-
-  
+  Promise.all(
+    createTextures(
+      unity,
+      gl, 
+      viewProjMatrix, 
+      u_MvpMatrix, 
+      currentAngle
+    )).then(newUnity => {
+      console.log("donw")
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // const tick = () => {   // Start drawing
+      // for (let index = 0; index < unity.length; index++) {
+        // const element = unity[index];
+        
+        createTextures(newUnity, gl, viewProjMatrix, u_MvpMatrix, currentAngle);
+      // }
+      // console.log("draw.")
+      // requestAnimationFrame(tick);
+    // };
+    // tick();
+  }).catch(console.log);
 
   return indices.length;
 }
 
-var shadow = {};
 var g_imgs = [];
 function initIndex(src, gl, ind, viewProjMatrix, u_MvpMatrix, currentAngle) {
     var indexBuffer = gl.createBuffer();
@@ -207,9 +208,6 @@ function initIndex(src, gl, ind, viewProjMatrix, u_MvpMatrix, currentAngle) {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array(ind), gl.STATIC_DRAW); 
     initTextures(src, gl, viewProjMatrix, u_MvpMatrix, currentAngle, indexBuffer);
-  
-  
-
 }
 
 function initEventHandlers(canvas, currentAngle) {
@@ -278,11 +276,91 @@ function initArrayBuffer(gl, data, num, type, attribute) {
   return true;
 }
 
+
+const createTextureBuffer = (gl, image, ind) => {
+  var indexBuffer = gl.createBuffer();
+  if (!indexBuffer) {
+    return -1;
+  }
+// Write the indices to the buffer object
+// Create a buffer object
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array(ind), gl.STATIC_DRAW);
+
+
+  var texture = gl.createTexture();
+  if (!texture) {
+    console.log('Failed to create the texture object');
+    return false;
+  }
+
+  // Get the storage location of u_Sampler
+  var u_Sampler = gl.getUniformLocation(gl.program, 'u_Sampler');
+
+  if (!u_Sampler) {
+    console.log('Failed to get the storage location of u_Sampler');
+    return false;
+  }
+
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);  // Flip the image Y coordinate
+  // Activate texture unit0
+  gl.activeTexture(gl.TEXTURE0);
+  // Bind the texture object to the target
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  // Set texture parameters
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); 
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  // Set the image to texture
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+
+  // Pass the texure unit 0 to u_Sampler
+  gl.uniform1i(u_Sampler, 0);
+  // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b);
+
+  // console.log("drawed.");
+  // draw(gl, 6, viewProjMatrix, u_MvpMatrix, currentAngle);
+
+  // loadTexture(gl, texture, u_Sampler, image, viewProjMatrix, u_MvpMatrix, currentAngle, b); 
+}
+// const texturePromise = (pSet, gl, viewProjMatrix, u_MvpMatrix, currentAngle) => 
+//   Promise.all(
+//     createTextures(
+//       pSet,
+//       gl, 
+//       viewProjMatrix, 
+//       u_MvpMatrix, 
+//       currentAngle
+//     )
+//   ).then( image => image );
+
+const createTextures = (imgSet, gl, viewProjMatrix, u_MvpMatrix, currentAngle) => imgSet.map(v => {
+  if( typeof v.image === "string") {
+    return new Promise((reslove, reject) => { 
+      var image = new Image();
+      if (!image) {
+        console.log('Failed to create the image object');
+        reject();
+      }
+      // Register the event handler to be called when image loading is completed
+      image.onload = function() {
+        createTextureBuffer(gl, image, v.pointer);
+        draw(gl, 6, viewProjMatrix, u_MvpMatrix, currentAngle);
+        reslove({image, pointer: v.pointer});
+      };
+      // Tell the browser to load an Image
+      image.src = v.image;
+    });
+  } else {
+    createTextureBuffer(gl, v.image, v.pointer);
+    draw(gl, 6, viewProjMatrix, u_MvpMatrix, currentAngle);
+  }
+});
+
+
+/*
 function initTextures(src, gl, viewProjMatrix, u_MvpMatrix, currentAngle, b) {
-
-
-  
-
   // Create a texture object
   var texture = gl.createTexture();
   if (!texture) {
@@ -339,3 +417,4 @@ function loadTexture(gl, texture, u_Sampler, image, viewProjMatrix, u_MvpMatrix,
   console.log("drawed.");
   draw(gl, 6, viewProjMatrix, u_MvpMatrix, currentAngle);
 }
+*/
