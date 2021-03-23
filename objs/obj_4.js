@@ -9,28 +9,27 @@ var VSHADER_SOURCE =`
   varying vec4 v_Color;
 
   uniform vec3 u_LightDirection;
-  uniform vec3 u_LightColor;
   attribute vec4 a_Normal;
   
-  uniform vec3 u_EnvLightColor;
 
   uniform vec4 u_NiJuZheng;
 
-  uniform vec3 u_LightPosition;
+  
   uniform mat4 u_ModalMatrix;
+
+  varying vec3 v_Normal;
+  varying vec3 v_Position;
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
-    vec3 normal = normalize(vec3(a_Normal));
 
-    vec4 position = u_ModalMatrix * a_Position;
+    v_Position = vec3(u_ModalMatrix * a_Position);
 
-    vec3 lightdirection = normalize(u_LightPosition - vec3(position)); 
+    v_Normal = normalize(vec3(a_Normal)); 
 
-    float nDotL = max(dot(lightdirection, normal), 0.0);
-    vec3 diffuse = u_LightColor * nDotL;
     v_TexCoord = a_TexCoord;
-    v_Color = vec4(diffuse + u_EnvLightColor, a_Color.a);
+
+    v_Color = a_Color;
   }`;
 
 
@@ -43,10 +42,31 @@ var FSHADER_SOURCE =
   'varying vec2 v_TexCoord;\n' +
   'varying vec4 v_Color;\n' +
   'uniform bool u_Special;\n' +
+  `
+    varying vec3 v_Normal;
+    uniform vec3 u_EnvLightColor;
+    uniform vec3 u_LightPosition;
+    uniform vec3 u_LightColor;
+    uniform vec3 u_EnvLight;
+    varying vec3 v_Position;
+
+  `+
   'void main() {\n' +
   '   vec4 texture = texture2D(u_Sampler, v_TexCoord);\n' +
   `
-    gl_FragColor = vec4(texture.rgb * v_Color.rgb, texture.a);
+      
+    vec3 normal = normalize(v_Normal);
+
+    vec3 lightdirection = normalize(u_LightPosition - v_Position);
+
+    float nDotL = max(dot(lightdirection, normal), 0.0);
+
+    vec3 diffuse = u_LightColor * nDotL;
+
+    vec4 Color = vec4(diffuse + u_EnvLightColor, v_Color.a);
+
+    gl_FragColor = vec4(texture.rgb * Color.rgb, texture.a);
+
   `+
   '}\n';
 
@@ -319,7 +339,7 @@ function setLight (gl) {
     
     gl.uniform3f(u_LightColor, 1.0, 1.0, 1.0);
     gl.uniform3f(u_EnvLightColor, 0.2, 0.2, 0.2);
-    gl.uniform3f(u_LightPosition, 3.0, 3.0, 4.0);
+    gl.uniform3f(u_LightPosition, 10.0, 3.0, 4.0);
 
     
     const LightDirection = new Vector3([0.5, 3.0, 4.0]);
