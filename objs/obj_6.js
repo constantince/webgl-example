@@ -29,7 +29,10 @@ function createTriangles(n) {
     return v;
     
 }
-console.log(createTriangles(6))
+const xPosition = Math.tan(30 * Math.PI / 180) * 0.3 * 2;
+const yPosition = 0.3;
+console.log(xPosition, yPosition);
+// console.log(createTriangles(6))
 const geometryFrag = {
     'triangle': {
         draw: 'TRIANGLES',
@@ -63,10 +66,27 @@ const geometryFrag = {
         indicate: 2,
         vertex: createTriangles(64),
         n: 33
+    },
+    "star": {
+        draw: 'TRIANGLE_STRIP',
+        indicate: 2,
+        vertex: [
+            0, 0.3,
+            -xPosition, -yPosition,
+            xPosition, -yPosition,
+            //三角形退化，减少绘制次数
+            xPosition, -yPosition,
+            -xPosition, yPosition - 0.2,
+
+            -xPosition, yPosition - 0.2,
+            xPosition, yPosition - 0.2,
+            0, -0.3 - 0.2
+         ],
+         n: 8
     }
 }
 
-var current = geometryFrag['circle'];
+var current = geometryFrag['star'];
 
 function main() {
     const webgl = canvas.getContext("webgl");
