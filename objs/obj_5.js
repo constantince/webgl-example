@@ -180,6 +180,15 @@ function initVertexBuffers(gl, viewProjMatrix, u_MvpMatrix, currentAngle, u_NiJu
      1.0,-1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0     // v4-v7-v6-v5 back
   ]);
 
+  var vertices = new Float32Array([   // Vertex coordinates
+    1.0, 1.0, 1.0, 0.25, 1,  -1.0, 1.0, 1.0, 0, 1,  -1.0,-1.0, 1.0, 0, 0.25,   1.0,-1.0, 1.0, 0.25, 0.25,    // v0-v1-v2-v3 front
+    1.0, 1.0, 1.0, 0.25, 1,  1.0,-1.0, 1.0, 0.25, 0.25,   1.0,-1.0,-1.0, 0.5, 0.25,   1.0, 1.0,-1.0, 0.5, 0.5,    // v0-v3-v4-v5 right
+    1.0, 1.0, 1.0, 0.25, 0,   1.0, 1.0,-1.0, 0.25, 0.25,  -1.0, 1.0,-1.0, 0, 0.25,  -1.0, 1.0, 1.0, 0, 0,   // v0-v5-v6-v1 up
+   -1.0, 1.0, 1.0, 0.25, 0,  -1.0, 1.0,-1.0, 0.25, 0.25,  -1.0,-1.0,-1.0, 0, 0.25,  -1.0,-1.0, 1.0, 0, 0   // v1-v6-v7-v2 left
+   -1.0,-1.0,-1.0, 0.25, 0, 1.0,-1.0,-1.0, 0.25, 0,   1.0,-1.0, 1.0, 0.25, 0, -1.0,-1.0, 1.0,  0.25, 0,  // v7-v4-v3-v2 down
+    1.0,-1.0,-1.0, 0.25, 0,  -1.0,-1.0,-1.0, 0.25, 0, -1.0, 1.0,-1.0,  0.25, 0, 1.0, 1.0,-1.0,  0.25, 0   // v4-v7-v6-v5 back
+ ]);
+
   var color = new Float32Array([
     0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  // v0-v1-v2-v3 front(blue)
     0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  // v0-v3-v4-v5 right(green)
@@ -253,9 +262,11 @@ function initVertexBuffers(gl, viewProjMatrix, u_MvpMatrix, currentAngle, u_NiJu
     0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0   // v4-v7-v6-v5 back
   ]);
 
+  const size = vertices.BYTES_PER_ELEMENT;
+
   // Write vertex information to buffer object
-  if (!initArrayBuffer(gl, vertices, 3, gl.FLOAT, 'a_Position')) return -1; // Vertex coordinates
-  if (!initArrayBuffer(gl, texCoords, 2, gl.FLOAT, 'a_TexCoord')) return -1;// Texture coordinates
+  if (!initArrayBuffer(gl, vertices, 3, gl.FLOAT, 'a_Position', {total: size * 5, start: 0})) return -1; // Vertex coordinates
+  if (!initArrayBuffer(gl, vertices, 2, gl.FLOAT, 'a_TexCoord', {total: size * 5, start: size * 3})) return -1;// Texture coordinates
   if (!initArrayBuffer(gl, normal, 3, gl.FLOAT, 'a_Normal')) return -1;// normal position
   // if (!initArrayBuffer(gl, color, 3, gl.FLOAT, 'a_Color')) return -1;// Texture coordinates
   setLight(gl);
@@ -293,7 +304,7 @@ function initVertexBuffers(gl, viewProjMatrix, u_MvpMatrix, currentAngle, u_NiJu
           draw(gl, 32, viewProjMatrix, u_MvpMatrix, currentAngle, u_NiJuZheng);
         // }
         // console.log("draw.")
-        // requestAnimationFrame(tick);
+        requestAnimationFrame(tick);
       };
       tick();
   });
@@ -425,7 +436,7 @@ function setLight (gl) {
     gl.uniform3fv(u_LightDirection, LightDirection.elements);
 }
 
-function initArrayBuffer(gl, data, num, type, attribute) {
+function initArrayBuffer(gl, data, num, type, attribute, pointer = {total: 0, start: 0}) {
   // Create a buffer object
   var buffer = gl.createBuffer();
   if (!buffer) {
@@ -441,7 +452,7 @@ function initArrayBuffer(gl, data, num, type, attribute) {
     console.log('Failed to get the storage location of ' + attribute);
     return false;
   }
-  gl.vertexAttribPointer(a_attribute, num, type, false, 0, 0);
+  gl.vertexAttribPointer(a_attribute, num, type, false, pointer.total, pointer.start);
   // Enable the assignment to a_attribute variable
   gl.enableVertexAttribArray(a_attribute);
 
