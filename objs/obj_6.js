@@ -13,9 +13,11 @@ const fragment = `
     }
 `;
 
-
-
-
+//计算底边两个终点的坐标
+const xPosition = Math.tan(30 * Math.PI / 180) * 0.3 * 2;
+const yPosition = 0.3;
+console.log(xPosition, yPosition);
+//画圆
 function createTriangles(n) {
     let v = []; let start = 0;
     const width = 0.3;
@@ -27,12 +29,22 @@ function createTriangles(n) {
         start += zata; 
     }
     return v;
-    
 }
-const xPosition = Math.tan(30 * Math.PI / 180) * 0.3 * 2;
-const yPosition = 0.3;
-console.log(xPosition, yPosition);
-// console.log(createTriangles(6))
+
+//画五角星
+function createStar() {
+    let coord = [], n = 10;
+    const perRaius = Math.PI / 180;
+    const Q = (360 / n) * perRaius;
+    for (let index = 1; index <= n; index++) {
+        var radius = index % 2 === 0 ? 0.3 : 0.15;
+        coord.push(Math.cos(Q * index) * radius);
+        coord.push(Math.sin(Q * index) * radius);
+    }
+    return coord;
+}
+
+console.log(createStar(6))
 const geometryFrag = {
     'triangle': {
         draw: 'TRIANGLES',
@@ -68,21 +80,10 @@ const geometryFrag = {
         n: 33
     },
     "star": {
-        draw: 'TRIANGLE_STRIP',
+        draw: 'TRIANGLE_FAN',
         indicate: 2,
-        vertex: [
-            0, 0.3,
-            -xPosition, -yPosition,
-            xPosition, -yPosition,
-            //三角形退化，减少绘制次数
-            xPosition, -yPosition,
-            -xPosition, yPosition - 0.2,
-
-            -xPosition, yPosition - 0.2,
-            xPosition, yPosition - 0.2,
-            0, -0.3 - 0.2
-         ],
-         n: 8
+        vertex: createStar(),
+         n: 10
     }
 }
 
@@ -94,7 +95,7 @@ function main() {
         return;
     }
     _initBuffer(webgl, current.indicate, current.vertex);
-    webgl.clearColor(0.0, 0.0, 0.0, 1.0);
+    webgl.clearColor(0.75,0.85, 0.8, 1.0);
     // webgl.enable(webgl.DEPTH_TEST_BUFFER);
     webgl.clear(webgl.COLOR_BUFFER_BIT);
     webgl.drawArrays(webgl[current.draw], 0, current.n);
