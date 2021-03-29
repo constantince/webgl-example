@@ -109,7 +109,7 @@ function _initBuffer(gl) {
 
 
  function _initMatrixModel(gl, vM, rM, angle) {
-    rM.setRotate(angle, 0.0, 1.0, 0.0);
+    rM.setRotate(angle, 1.0, 1.0, 0.0);
     vM.multiply(rM);
     const u_ViewMatrixModel = gl.getUniformLocation(gl.program, 'u_ViewMatrixModel');
     gl.uniformMatrix4fv(u_ViewMatrixModel, false, vM.elements); 
@@ -131,7 +131,7 @@ function main() {
 
     const number = _initBuffer(webgl);
 
-    webgl.clearColor(0.75, 0.85, 0.8, 1.0);
+    webgl.clearColor(0.75, 0.85, 0.8, 0.9);
     webgl.enable(webgl.DEPTH_TEST);
     
     function move() {
