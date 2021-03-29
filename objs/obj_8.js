@@ -1,14 +1,22 @@
+const RADIUS = 3;
+const radius_number = 164;
+const SPEED = .1;
 const VERTEX_SHADER = `
     attribute vec4 a_Position;
     uniform mat4 u_ViewMatrixModel;
+    uniform mat4 u_ReverseMatrixModel;
     attribute vec4 a_Color;
     varying vec4 v_Color;
 
     attribute vec2 a_TexCoord;
     varying vec2 v_TexCoord;
+
+    attribute vec4 a_Normal;
+    varying vec3 v_Normal;
+
     void main() {
         gl_Position = u_ViewMatrixModel * a_Position;
-        v_Color = a_Color;
+        v_Normal = normalize(vec3(u_ReverseMatrixModel * a_Normal));
         v_TexCoord = a_TexCoord;
     }
 `;
@@ -18,8 +26,19 @@ const FRAGMENT_SHADER = `
     varying vec4 v_Color;
     varying vec2 v_TexCoord;
     uniform sampler2D u_Sampler;
+
+    varying vec3 v_Normal;
+    uniform vec3 u_LightColor;
+    uniform vec3 u_LightDirection;
+    uniform vec3 u_EnvLight;
+
     void main() {
-        gl_FragColor = texture2D(u_Sampler, v_TexCoord);
+        vec3 normal = normalize(v_Normal);
+        vec4 texture = texture2D(u_Sampler, v_TexCoord);
+        float dot = max(dot(u_LightDirection, normal), 0.0);
+        vec3 difuse = u_LightColor * dot;
+        vec4 color = vec4(difuse + u_EnvLight, 1.0);
+        gl_FragColor = vec4(texture.rgb * color.rgb, texture.a);
     }
 `;
 
@@ -73,7 +92,7 @@ function _createBuffer(gl, index, name, size) {
     gl.vertexAttribPointer(variable, size, gl.FLOAT,  false, 0, 0);
     gl.enableVertexAttribArray(variable);
 }
-const radius_number = 10;
+
 //创建球形
 function createSphereVertext(lat = radius_number, lng = radius_number) {
     let R = .5, vertexs = [];
@@ -97,7 +116,7 @@ function initBuffers()
 {
     var latitudeBands = radius_number;
     var longitudeBands = radius_number;
-    var radius = 2;
+    var radius = RADIUS;
     var vertexPositionData = [];
     var normalData = [];
     var textureCoordData = [];
@@ -178,11 +197,14 @@ function loadTexture(gl, sampler, image, texture) {
     // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);    
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    //     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); 
+    //     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);    
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     
 
-    gl.generateMipmap(gl.TEXTURE_2D);
+    // gl.generateMipmap(gl.TEXTURE_2D);
 
     // gl.bindTexture(gl.TEXTURE_2D, null);
     gl.uniform1i(sampler, 0); 
@@ -193,30 +215,50 @@ function loadTexture(gl, sampler, image, texture) {
 
 
 function _initBuffer(gl) {
-    const {vertexPositionData, textureCoordData} = initBuffers();
+    const {vertexPositionData, textureCoordData, normalData} = initBuffers();
     const vertexs = new Float32Array(vertexPositionData);
     // console.log(textureCoordData);
     const textures = new Float32Array(textureCoordData);
+
+    const normal = new Float32Array(normalData);
 
     const pointer = new Uint16Array(createPointer());
 
     _createBuffer(gl, vertexs, 'a_Position', 3);
     _createBuffer(gl, textures, 'a_TexCoord', 2);
+    _createBuffer(gl, normal, 'a_Normal', 3);
     
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, pointer, gl.STATIC_DRAW);
+
+    const u_LightColor = gl.getUniformLocation(gl.program, "u_LightColor");
+    const u_LightDirection = gl.getUniformLocation(gl.program, "u_LightDirection");
+    const u_EnvLight = gl.getUniformLocation(gl.program, "u_EnvLight");
+
+    const envLightColorVector = new Vector3([0.1, 0.1, 0.1]);
+    gl.uniform3fv(u_EnvLight, envLightColorVector.elements);
+    gl.uniform3f(u_LightColor, 1.0, 1.0, 1.0);
+    const direction = new Vector3([-30.0, 0, 0]);
+    gl.uniform3fv(u_LightDirection, direction.elements);
+
     return pointer.length;
 
 }
 
 
-
- function _initMatrixModel(gl, vM, rM, angle) {
-    rM.setRotate(angle, 0.0, 1.0, 0.0);
-    vM.multiply(rM);
-    const u_ViewMatrixModel = gl.getUniformLocation(gl.program, 'u_ViewMatrixModel');
+const RotateMatrix = new Matrix4();
+const ReverseMatrix = new Matrix4();
+ function _initMatrixModel(gl, vM, angle, u_ViewMatrixModel, u_ReverseMatrixModel) {
+    RotateMatrix.setRotate(angle, 0.0, 1.0, 0.0);
+    // RotateMatrix.setRotate(20, 0.0, 1.0, 0.0);
+    vM.multiply(RotateMatrix);
     gl.uniformMatrix4fv(u_ViewMatrixModel, false, vM.elements); 
+    ReverseMatrix.setInverseOf(vM);
+    ReverseMatrix.transpose();
+    // console.log(ReverseMatrix)
+    gl.uniformMatrix4fv(u_ReverseMatrixModel, false, ReverseMatrix.elements);
+
 }
 
 
@@ -227,24 +269,25 @@ function main() {
         return false;
     }
 
-    var rotateMatrix = new Matrix4();
     var M = new Matrix4();
-    M.setPerspective(30, 1, 1, 100).lookAt(3, 3, 7, 0, 0, 0, 0, 1, 0);
-    let speed = 1, start = 0;
+    M.setPerspective(30, 1, 1, 100).lookAt(10, 3, 7, 0, 0, 0, 0, 1, 0);
+    const u_ViewMatrixModel = webgl.getUniformLocation(webgl.program, 'u_ViewMatrixModel');
+    const u_ReverseMatrixModel = webgl.getUniformLocation(webgl.program, "u_ReverseMatrixModel");
+    let speed = SPEED, start = 0;
 
     // _initMatrixModel(webgl, canvas.widht, canvas.height);
 
     const number = _initBuffer(webgl);
     // webgl.viewport(0, 0, webgl.viewportWidth, webgl.viewportHeight);
-    webgl.clearColor(0.75, 0.85, 0.8, 1.0);
+    webgl.clearColor(0.0, 0.0, 0.0, 1.0);
     webgl.enable(webgl.DEPTH_TEST);
-    createTexture(webgl, './assets/brick1.png');
+    createTexture(webgl, './assets/earthmap1k.jpg');
     function move() {
         const ang = start + speed;
-        _initMatrixModel(webgl, M, rotateMatrix, ang);
+        _initMatrixModel(webgl, M, ang, u_ViewMatrixModel, u_ReverseMatrixModel);
         webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BUFFER_BIT);
         webgl.drawElements(webgl.TRIANGLES, number, webgl.UNSIGNED_SHORT, 0);
-        // requestAnimationFrame(move)
+        requestAnimationFrame(move)
     }
     setTimeout(function(){
         move();
