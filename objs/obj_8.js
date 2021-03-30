@@ -1,4 +1,4 @@
-const RADIUS = 3;
+const RADIUS = 1;
 const radius_number = 164;
 const SPEED = .1;
 const VERTEX_SHADER = `
@@ -201,10 +201,10 @@ function loadTexture(gl, sampler, image, texture) {
     //     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); 
     //     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);    
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR);
     
 
-    // gl.generateMipmap(gl.TEXTURE_2D);
+    gl.generateMipmap(gl.TEXTURE_2D);
 
     // gl.bindTexture(gl.TEXTURE_2D, null);
     gl.uniform1i(sampler, 0); 
@@ -281,7 +281,7 @@ function main() {
     // webgl.viewport(0, 0, webgl.viewportWidth, webgl.viewportHeight);
     webgl.clearColor(0.0, 0.0, 0.0, 1.0);
     webgl.enable(webgl.DEPTH_TEST);
-    createTexture(webgl, './assets/earthmap1k.jpg');
+    createTexture(webgl, './assets/test.png');
     function move() {
         const ang = start + speed;
         _initMatrixModel(webgl, M, ang, u_ViewMatrixModel, u_ReverseMatrixModel);
