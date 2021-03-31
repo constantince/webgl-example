@@ -20,13 +20,74 @@ const SHADER_FRAGMENT = `
     }
 `;
 
+const GEO_SHADER_FRAGMENT = `
+    void main() {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 0.5);
+    }
+`;
+
+const SPHERE_SHADER_FRAGMENT = `
+    void main() {
+        gl_FragColor = vec4(1.0, 1.0, 0.0, 0.8);
+    }
+`;
+// initialize shader
+const _initShader = (gl, vertex, fragment) => {
+    const vShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vShader, vertex);
+    gl.compileShader(vShader);
+
+    if(!gl.getShaderParameter(vShader, gl.COMPILE_STATUS)) {
+        const info = gl.getShaderInfoLog(vShader);
+        console.warn(info);
+        return false;
+    }
+
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    const fShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fShader, fragment);
+    gl.compileShader(fShader);
+
+    if(!gl.getShaderParameter(fShader, gl.COMPILE_STATUS)) {
+        const info = gl.getShaderInfoLog(fShader);
+        console.warn(info);
+        return false;
+    }
+    const program = gl.createProgram();
+    gl.attachShader(program, vShader);
+    gl.attachShader(program, fShader);
+    gl.linkProgram(program);
+
+    if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        const pInfo = gl.getProgramInfoLog(program);
+        console.warn(pInfo);
+        return false;
+    }
+
+   
+
+    // gl.deleteShader(vShader);
+    // gl.deleteShader(fShader);
+
+    // gl.useProgram(program);
+
+    // gl.program = program;
+    return program;
+
+}
+const canvas = document.getElementById("cube");
+const webgl = canvas.getContext("webgl");
+// const program = _initShader(webgl, SHADER_VERTEX, SHADER_FRAGMENT);
+
+
 var coneGeo = function(radius, height, segment){
     //锥顶
     var top = [0, height, 0];
     //锥底，锥底半径radius
     //根据segment来切割锥底圆
     var sliceNum = segment || 3;
-    var rad = Math.PI*2/sliceNum;
+    var rad = Math.PI * 2 / sliceNum;
     var bottom = [];
     for(var i=0; i<sliceNum; i++){
         bottom[i*3] = radius*Math.cos(rad*i);
@@ -69,19 +130,26 @@ var coneGeo = function(radius, height, segment){
    return {faces, vertices};
 };
 
-const createCone = (gl) => {
-    const { faces, vertices} =  coneGeo(1, 2, 5);
-    _createBuffer(gl, new Float32Array(vertices), "a_Position", 3);
+const createCone = (gl, program) => {
+    // const program = _initShader(gl, SHADER_VERTEX, GEO_SHADER_FRAGMENT);
+    const { faces, vertices} =  coneGeo(1, 2, 4);
+    _createBuffer(gl, new Float32Array(vertices), "a_Position", 3, program);
 
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(faces), gl.STATIC_DRAW);
 
-    return faces.length;
+    return {
+        num: faces.length,
+        position: 4,
+        byte: gl.UNSIGNED_SHORT,
+        program
+    }
 }
 
-const createSphereVertext = (gl) => {
-    const RADIUS = 1.5, LAT = 64, LNG = 64;
+const createSphereVertext = (gl, program) => {
+    // const program = _initShader(gl, SHADER_VERTEX, SPHERE_SHADER_FRAGMENT);
+    const RADIUS = 1.5, LAT = 5, LNG = 5;
     let vertex = [];
     for (let n = 0; n <= LAT; n++) {
         const zita =  2 * Math.PI * (n / LAT);
@@ -98,7 +166,7 @@ const createSphereVertext = (gl) => {
         } 
     }
 
-    console.log(vertex);
+    // console.log(vertex);
 
     var indexData = [];
     for(var latNumber = 0; latNumber < LAT; latNumber ++)
@@ -116,25 +184,29 @@ const createSphereVertext = (gl) => {
         }
     }
 
-    console.log(indexData);
+    // console.log(indexData);
 
-    _createBuffer(gl, new Float32Array(vertex), "a_Position", 3);
+    _createBuffer(gl, new Float32Array(vertex), "a_Position", 3, program);
 
-    const Color = new Vector4([1.0, 0.0, 0.0, 1.0]);
-    console.log(Color);
-    const c = gl.getUniformLocation(gl.program, "a_Color");
-    gl.uniform4fv(c, Color.elements);
-    
+    // const Color = new Vector4([1.0, 0.0, 0.0, 1.0]);
+    // // console.log(Color);
+    // const c = gl.getUniformLocation(program, "a_Color");
+    // gl.uniform4fv(c, Color.elements);
 
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
 
     
-    return indexData.length;
+    return {
+        num: indexData.length,
+        program, 
+        byte: gl.UNSIGNED_SHORT,
+        position: -4
+    };
 }
 
-const createCubeVertext = (gl) => {
+const createCubeVertext = (gl, program) => {
     const vertexs = new Float32Array([
         1.0, 1.0, 1.0,  -1.0, 1.0, 1.0,  -1.0,-1.0, 1.0,   1.0,-1.0, 1.0,  // v0-v1-v2-v3 front
         1.0, 1.0, 1.0,   1.0,-1.0, 1.0,   1.0,-1.0,-1.0,   1.0, 1.0,-1.0,  // v0-v3-v4-v5 right
@@ -162,46 +234,105 @@ const createCubeVertext = (gl) => {
        20,21,22,  20,22,23     // back
     ]);
 
-    _createBuffer(gl, vertexs, "a_Position", 3);
-    _createBuffer(gl, color, "a_Color", 3);
+    // _initMatrix(gl, 0, 0);
+    _createBuffer(gl, vertexs, "a_Position", 3, program);
+    _createBuffer(gl, color, "a_Color", 3, program);
 
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, pointer, gl.STATIC_DRAW);
 
-    return pointer.length;
+    return {
+        num: pointer.length,
+        position: 0,
+        byte: gl.UNSIGNED_BYTE
+    }
 
 }
-let speed = .3, r = 0;
+let speed = .7, r = 0;
 const main = () => {
-    const canvas = document.getElementById("cube");
-    const webgl = canvas.getContext("webgl");
+    
     webgl.clearColor(0.75, 0.85, 0.8, 0.9);
     webgl.enable(webgl.DEPTH_TEST);
+
+   
       // initialize the shaders
-    if(!_initShader(webgl, SHADER_VERTEX, SHADER_FRAGMENT)) {
-        return false;
-    }
+    // if(!_initShader(webgl, SHADER_VERTEX, SHADER_FRAGMENT)) {
+    //     return false;
+    // }
+    // let sphere_num = createSphereVertext(webgl);
+    // _initMatrix(webgl, 0, r);
+    // go(webgl, 4, 0, sphere_num, webgl.UNSIGNED_SHORT);
+    // webgl.drawElements(webgl.TRIANGLES, sphere_num, webgl.UNSIGNED_SHORT, 0);
+
+    // _initMatrix(webgl, 4, r);
+
+    
+
+    
+
+
+    
+
+   
+
+
+    // let cone_num = createCone(webgl);
+    // go(webgl, 0, 0, cone_num);
+    // webgl.drawElements(webgl.TRIANGLES, cone_num, webgl.UNSIGNED_SHORT, 0);
+    
+
+    // let cube_num = createCubeVertext(webgl);
+    // go(webgl, -4, 0, cube_num);
+    // webgl.drawElements(webgl.TRIANGLES, num, webgl.UNSIGNED_BYTE, 0);
+    // console.log(allGeo);
+    const allGeo = {
+        cube:  _initShader(webgl, SHADER_VERTEX, SHADER_FRAGMENT),
+        sphere: _initShader(webgl, SHADER_VERTEX, SPHERE_SHADER_FRAGMENT),
+        cone: _initShader(webgl, SHADER_VERTEX, GEO_SHADER_FRAGMENT),
+    };
+
+    const OriginalMatrix = new Matrix4();
+    OriginalMatrix.setPerspective(30, 1, 1, 100)
+    .lookAt(3, 3, 30, 0, 0, 0, 0, 1, 0);
+
+    const tick = () => {
+        
+    r += speed;
     webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BUFFER_BIT);
 
-    _initMatrix(webgl, 0, r);
-    let num = createSphereVertext(webgl);
-    webgl.drawElements(webgl.TRIANGLES, num, webgl.UNSIGNED_SHORT, 0);
+    webgl.useProgram(allGeo.cone);
 
-    _initMatrix(webgl, 4, r);
-    num = createCone(webgl);
-    webgl.drawElements(webgl.TRIANGLES, num, webgl.UNSIGNED_SHORT, 0);
+    let item = createCone(webgl, allGeo.cone);
     
+    go(webgl, item.position, r, item.num, item.byte, allGeo.cone, OriginalMatrix);
 
-    _initMatrix(webgl, -5, r);
-    num = createCubeVertext(webgl);
-    webgl.drawElements(webgl.TRIANGLES, num, webgl.UNSIGNED_BYTE, 0);
+    webgl.useProgram(allGeo.sphere);
+    
+    item = createSphereVertext(webgl, allGeo.sphere);
+
+    go(webgl, item.position, r, item.num, item.byte, allGeo.sphere, OriginalMatrix);
+
+    webgl.useProgram(allGeo.cube);
+
+    item = createCubeVertext(webgl, allGeo.cube);
+    
+    go(webgl, item.position, r, item.num, item.byte, allGeo.cube, OriginalMatrix);
 
     
-    const tick = () => {
-        r += speed;
-        console.log(r);
-        _initMatrix(webgl, -5, r);
+        // webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BUFFER_BIT);
+        // Object.keys(allGeo).forEach((v, i) => {
+        //     const item = allGeo[v];
+        //     go(webgl, item.position, 0, item.num, item.byte, item.program);
+        // });
+        // r += speed;
+        // go(webgl, 4, r, cone_num, webgl.UNSIGNED_SHORT);
+        // go(webgl, 4, 0, sphere_num, webgl.UNSIGNED_SHORT);
+        // go(webgl, -4, r, cube_num, webgl.UNSIGNED_BYTE);
+        // go(webgl, 4, r, cone_num, webgl.UNSIGNED_SHORT);
+        // go(webgl, -4, r, sphere_num);
+        // console.log(r);
+        // _initMatrix(webgl, -5, r);
         // requestAnimationFrame(tick);
     }
     tick();
@@ -210,63 +341,18 @@ const main = () => {
     
 }
 
-// initialize shader
-const _initShader = (gl, vertex, fragment) => {
-    const vShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vShader, vertex);
-    gl.compileShader(vShader);
 
-    if(!gl.getShaderParameter(vShader, gl.COMPILE_STATUS)) {
-        const info = gl.getShaderInfoLog(vShader);
-        console.warn(info);
-        return false;
-    }
-
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-    const fShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fShader, fragment);
-    gl.compileShader(fShader);
-
-    if(!gl.getShaderParameter(fShader, gl.COMPILE_STATUS)) {
-        const info = gl.getShaderInfoLog(fShader);
-        console.warn(info);
-        return false;
-    }
-
-    const program = gl.createProgram();
-    gl.attachShader(program, vShader);
-    gl.attachShader(program, fShader);
-    gl.linkProgram(program);
-
-    if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        const pInfo = gl.getProgramInfoLog(program);
-        console.warn(pInfo);
-        return false;
-    }
-
-   
-
-    gl.deleteShader(vShader);
-    gl.deleteShader(fShader);
-
-    gl.useProgram(program);
-
-    gl.program = program;
-    return true;
-
-}
 
 const _initTexture = (gl) => {
 
 }
 
-const _createBuffer = (gl, vertex, name, len) => {
+const _createBuffer = (gl, vertex, name, len, program) => {
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertex, gl.STATIC_DRAW);
 
-    const variable = gl.getAttribLocation(gl.program, name);
+    const variable = gl.getAttribLocation(program, name);
     gl.vertexAttribPointer(variable, len, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(variable);
 }
@@ -275,15 +361,19 @@ const _initBuffer = (gl) => {
 
 }
 
-const _initMatrix = (gl, offset, angle) => {
-    const vM = new Matrix4();
-    const transformMatrix = new Matrix4();
-    transformMatrix.setTranslate(offset, 0.0, 0.0).rotate(angle, 0.0, 1.0, 0.0);
-    vM.setPerspective(30, 1, 1, 100)
-    .lookAt(3, 3, 30, 0, 0, 0, 0, 1, 0);
+function go (gl, offset, angle, num, type, program, vM) {
+    // gl.useProgram(program);
+    // console.log(angle)
+    _initMatrix(gl, offset, angle, program, vM);
+    gl.drawElements(gl.TRIANGLES, num, type, 0);
+}
+
+const transformMatrix = new Matrix4();
+const _initMatrix = (gl, offset, angle, program, vM) => {
     
+    transformMatrix.setTranslate(offset, 0.0, 0.0).rotate(angle, 1.0, 1.0, 1.0);
     vM.multiply(transformMatrix);
-    const u_ViewProjectionMatrix = gl.getUniformLocation(gl.program, "u_ViewProjectionMatrix");
+    const u_ViewProjectionMatrix = gl.getUniformLocation(program, "u_ViewProjectionMatrix");
     gl.uniformMatrix4fv(u_ViewProjectionMatrix, false, vM.elements);
 }
 
