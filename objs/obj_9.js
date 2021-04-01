@@ -291,33 +291,29 @@ const main = () => {
         sphere: _initShader(webgl, SHADER_VERTEX, SPHERE_SHADER_FRAGMENT),
         cone: _initShader(webgl, SHADER_VERTEX, GEO_SHADER_FRAGMENT),
     };
-
-    const OriginalMatrix = new Matrix4();
-    OriginalMatrix.setPerspective(30, 1, 1, 100)
-    .lookAt(3, 3, 30, 0, 0, 0, 0, 1, 0);
-
+    webgl.useProgram(allGeo.cube);
     const tick = () => {
         
     r += speed;
     webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BUFFER_BIT);
 
-    webgl.useProgram(allGeo.cone);
+    // webgl.useProgram(allGeo.cone);
 
-    let item = createCone(webgl, allGeo.cone);
+    // let item = createCone(webgl, allGeo.cone);
     
-    go(webgl, item.position, r, item.num, item.byte, allGeo.cone, OriginalMatrix);
+    // go(webgl, item.position, r, item.num, item.byte, allGeo.cone);
 
-    webgl.useProgram(allGeo.sphere);
+    // webgl.useProgram(allGeo.sphere);
     
-    item = createSphereVertext(webgl, allGeo.sphere);
+    // item = createSphereVertext(webgl, allGeo.sphere);
 
-    go(webgl, item.position, r, item.num, item.byte, allGeo.sphere, OriginalMatrix);
+    // go(webgl, item.position, r, item.num, item.byte, allGeo.sphere);
 
-    webgl.useProgram(allGeo.cube);
+    
 
     item = createCubeVertext(webgl, allGeo.cube);
     
-    go(webgl, item.position, r, item.num, item.byte, allGeo.cube, OriginalMatrix);
+    go(webgl, item.position, r, item.num, item.byte, allGeo.cube);
 
     
         // webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BUFFER_BIT);
@@ -369,12 +365,14 @@ function go (gl, offset, angle, num, type, program, vM) {
 }
 
 const transformMatrix = new Matrix4();
-const _initMatrix = (gl, offset, angle, program, vM) => {
-    
+const _initMatrix = (gl, offset, angle, program) => {
+    const OriginalMatrix = new Matrix4();
+    OriginalMatrix.setPerspective(30, 1, 1, 100)
+    .lookAt(3, 3, 30, 0, 0, 0, 0, 1, 0);
     transformMatrix.setTranslate(offset, 0.0, 0.0).rotate(angle, 1.0, 1.0, 1.0);
-    vM.multiply(transformMatrix);
+    OriginalMatrix.multiply(transformMatrix);
     const u_ViewProjectionMatrix = gl.getUniformLocation(program, "u_ViewProjectionMatrix");
-    gl.uniformMatrix4fv(u_ViewProjectionMatrix, false, vM.elements);
+    gl.uniformMatrix4fv(u_ViewProjectionMatrix, false, OriginalMatrix.elements);
 }
 
 const _initLight = (gl) => {
