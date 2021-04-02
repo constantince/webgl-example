@@ -79,7 +79,7 @@ function main() {
       // If pressed position is inside <canvas>, check if it is above object
       var x_in_canvas = x - rect.left, y_in_canvas = rect.bottom - y;
       var picked = check(gl, n, x_in_canvas, y_in_canvas, currentAngle, u_Clicked, viewProjMatrix, u_MvpMatrix);
-      if (picked) alert('The cube was selected! ');
+      if (picked) console.log('The cube was selected! ');
     }
   }
 

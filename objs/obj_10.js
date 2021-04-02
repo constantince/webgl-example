@@ -3,9 +3,32 @@ const VERTEX_SHADER_CUBE = `
     uniform mat4 a_ProjectionViewMatrix;
     attribute vec4 a_Color;
     varying vec4 v_Color;
+    uniform bool u_Clicked;
     void main() {
         gl_Position = a_ProjectionViewMatrix * a_Position;
-        v_Color = a_Color;
+        if (u_Clicked) {
+            v_Color = vec4(1.0, 0.0, 0.0, 1.0);
+        } else {
+            v_Color = a_Color;
+        }
+        
+    }
+`;
+
+const VERTEX_SHADER_SPHERE = `
+    attribute vec4 a_Position;
+    uniform mat4 a_ProjectionViewMatrix;
+    attribute vec4 a_Color;
+    varying vec4 v_Color;
+    uniform bool u_Clicked;
+    void main() {
+        gl_Position = a_ProjectionViewMatrix * a_Position;
+        if (u_Clicked) {
+            v_Color = vec4(1.0, 0.0, 0.0, 1.0);
+        } else {
+            v_Color = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+        
     }
 `;
 
@@ -22,36 +45,45 @@ const FRAG_SHADER_SPHERE = `
     precision mediump float;
     varying vec4 v_Color;
     void main() {
-        gl_FragColor = vec4(1.0, 0, 0, 1.0);
+        gl_FragColor = v_Color;
     }
 `;
 
 class Cube {
+    name = "cube";
+    selectedColor = 255;
     constructor(webgl) {
         this.webgl = webgl;
         this.program = getProgram(webgl, VERTEX_SHADER_CUBE, FRAG_SHADER_CUBE);
-        this.number =  createCubeVertexBuffer(this.webgl, this.program);
+        
         
     }
 
     draw(angle) {
         this.webgl.useProgram(this.program); 
-        createProjectionView(this.webgl, this.program, -4, angle);
+        this.number =  createCubeVertexBuffer(this.webgl, this.program);
+        createProjectionView(this.webgl, this.program, 0, angle);
+        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_BYTE, 0);
+    }
+
+    click() {
+        this.webgl.clear(this.webgl.COLOR_BUFFER_BIT | this.webgl.DEPTH_BIT);
         this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_BYTE, 0);
     }
 }
 
 class Sphere {
+    name = "sphere";
+    selectedColor = 226;
     constructor(webgl) {
         this.webgl = webgl;
+        this.program = getProgram(webgl, VERTEX_SHADER_SPHERE, FRAG_SHADER_CUBE);
         
-        this.program = getProgram(webgl, VERTEX_SHADER_CUBE, FRAG_SHADER_SPHERE);
-        this.number = createCubeVertexBuffer(this.webgl, this.program);
     }
 
     draw(angle) {
         this.webgl.useProgram(this.program);
-        
+        this.number = createCubeVertexBuffer(this.webgl, this.program);
         createProjectionView(this.webgl, this.program, 1, angle);
         this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_BYTE, 0);
     }
@@ -67,15 +99,16 @@ function main() {
     webgl.clearColor(0.0, 0.0, 0.0, 1.0);
     webgl.enable(webgl.DEPTH_TEST);
 
-    
+    eventInitialion(canvas, webgl,  cube);
     
     let angle = 0, speed = 1;
     var tick = () => {
         angle += speed;
         webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BIT);
-        sphere.draw(angle);
-        cube.draw(angle);
-        requestAnimationFrame(tick)
+        
+        // sphere.draw(angle);
+        cube.draw(0);
+        // requestAnimationFrame(tick)
     }
     tick();
 };
@@ -207,10 +240,58 @@ function loadBuffer(gl, vertex, name, program, type) {
 function createProjectionView(gl, program, x, angle) {
     const vM = new Matrix4();
     const rM = new Matrix4();
-   
-    vM.setPerspective(60, 1, 1, 100).lookAt(1, 3, 10, 0, 0, 0, 0, 1, 0);
-    rM.setTranslate(x, 0, 0).rotate(angle, 1.0, 1.0, 0);;
+    vM.setPerspective(30.0, 1.0, 1.0, 100.0).lookAt(1, 3, 10, 0, 0, 0, 0, 1, 0);
+    // vM;
+  
+    // vM.setPerspective(60, 1, 1, 100).lookAt(1, 3, 10, 0, 0, 0, 0, 1, 0);
+    rM.setTranslate(0, 0, 0).rotate(angle, 1.0, 1.0, 0);
     vM.multiply(rM);
     const a_ProjectionViewMatrix = gl.getUniformLocation(program, "a_ProjectionViewMatrix");
     gl.uniformMatrix4fv(a_ProjectionViewMatrix, false, vM.elements);
+}
+
+
+function eventInitialion(canvas, gl, objects) {
+    canvas.addEventListener("mousedown", ev => {
+        console.log(ev.clientX, ev.clientY);
+        const canvasRect = ev.target.getBoundingClientRect();
+
+        const x_in_webgl = ev.clientX - canvasRect.left;
+        const y_in_webgl = ev.clientY - canvasRect.top;
+        // console.log(x_in_webgl, y_in_webgl)
+        // objects.forEach(v => {
+            gl.useProgram(objects.program);
+        const u_Click = gl.getUniformLocation(objects.program, "u_Clicked");
+        gl.uniform1i(u_Click, 0);
+        const result =  check(gl, x_in_webgl, y_in_webgl, objects, u_Click);
+        console.log(result);
+        // });
+
+
+    }, false);
+}
+
+function check(gl, x, y, target, u_Click) {
+    let t = null;
+    gl.uniform1i(u_Click, 1);
+    // set color;
+    // gl.clear(gl.COLOR_BUFFER_BIT)
+    target.click(0);
+    let arr = new Uint8Array(4);
+    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, arr);
+    console.log(arr);
+    if (arr[0] === 255) {
+        t = target.name;
+    }
+    // // const m = gl.getUniformLocation(target.program, "u_Clicked");
+
+    gl.uniform1i(u_Click, 0);
+    // reverse the color;
+    
+    // setTimeout(function(){
+        // gl.clear(gl.COLOR_BUFFER_BIT)
+    target.click(0);
+    // }, 1)
+   
+    return t;
 }
