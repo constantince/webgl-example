@@ -92,7 +92,7 @@ function initVertexBuffers(gl) {
   ]);
 
   // Indices of the vertices
-  var indices = new Uint8Array([
+  var indices = new Uint16Array([
     0, 1, 2,   0, 2, 3,    // front
     0, 3, 4,   0, 4, 5,    // right
     0, 5, 6,   0, 6, 1,    // up

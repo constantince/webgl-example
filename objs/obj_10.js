@@ -26,7 +26,7 @@ const VERTEX_SHADER_SPHERE = `
         if (u_Clicked) {
             v_Color = vec4(0.0, 1.0, 0.0, 1.0);
         } else {
-            v_Color = vec4(1.0, 0.0, 0.0, 1.0);
+            v_Color = vec4(1.0, 1.0, 1.0, 1.0);
         }
         
     }
@@ -52,11 +52,12 @@ const FRAG_SHADER_SPHERE = `
 class Cube {
     name = "cube";
     selectedColor = 255;
-    constructor(webgl) {
+    position = [2, 0, 0]
+    constructor(webgl, program) {
+        // this.webgl = webgl;
+        // this.program = program;
         this.webgl = webgl;
         this.program = getProgram(webgl, VERTEX_SHADER_CUBE, FRAG_SHADER_CUBE);
-        
-        
     }
 
     draw(angle, y = 0, size) {
@@ -64,39 +65,41 @@ class Cube {
         const u_Click = this.webgl.getUniformLocation(this.program, "u_Clicked");
         this.webgl.uniform1i(u_Click, y);
         this.number = createCubeVertexBuffer(this.webgl, this.program);
-        createProjectionView(this.webgl, this.program, -2, angle, size);
+        createProjectionView(this.webgl, this.program, this.position[0], angle, size);
         // this.webgl.clear(this.webgl.COLOR_BUFFER_BIT | this.webgl.DEPTH_BUFFER_BIT);
-        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_BYTE, 0);
+        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_SHORT, 0);
     }
 
     click() {
         // this.webgl.clear(this.webgl.COLOR_BUFFER_BIT | this.webgl.DEPTH_BIT);
-        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_BYTE, 0);
+        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_SHORT, 0);
     }
 }
 
 class Sphere {
     name = "sphere";
     selectedColor = 226;
-    constructor(webgl) {
+    position = [-2, 0, 0]
+    constructor(webgl, program) {
+        // this.webgl = webgl;
+        // this.program = program;
         this.webgl = webgl;
         this.program = getProgram(webgl, VERTEX_SHADER_SPHERE, FRAG_SHADER_CUBE);
-        
     }
 
     draw(angle, y = 0, size) {
         this.webgl.useProgram(this.program); 
         const u_Click = this.webgl.getUniformLocation(this.program, "u_Clicked");
         this.webgl.uniform1i(u_Click, y);
-        this.number = createCubeVertexBuffer(this.webgl, this.program);
-        createProjectionView(this.webgl, this.program, 2, angle, size);
+        this.number = createSphereVertexBuffer(this.webgl, this.program);
+        createProjectionView(this.webgl, this.program, this.position[0], angle, size);
         // this.webgl.clear(this.webgl.COLOR_BUFFER_BIT | this.webgl.DEPTH_BUFFER_BIT);
-        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_BYTE, 0);
+        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_SHORT, 0);
     }
 
     click() {
         // this.webgl.clear(this.webgl.COLOR_BUFFER_BIT | this.webgl.DEPTH_BIT);
-        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_BYTE, 0);
+        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_SHORT, 0);
     }
 }
 var animationParameters = {
@@ -107,21 +110,25 @@ function main() {
     console.log("let us start...");
     const canvas = document.getElementById("cube");
     const webgl = canvas.getContext("webgl");
-
+    // const program = getProgram(webgl, VERTEX_SHADER_CUBE, FRAG_SHADER_CUBE);
     const cube = new Cube(webgl);
     const sphere = new Sphere(webgl);
-    webgl.clearColor(0.0, 0.0, 0.0, 1.0);
+    webgl.clearColor(0.75, 0.85, 0.8, 0.9);
     webgl.enable(webgl.DEPTH_TEST);
-
+    webgl.enable(webgl.CULL_FACE);
+	webgl.frontFace(webgl.CCW);
+	webgl.cullFace(webgl.BACK);
+    // webgl.useProgram(program);
     eventInitialion(canvas, webgl,  [cube, sphere]);
     let angle = 0, size = 15;
     var tick = () => {
-        angle += animationParameters.speed;
-        size += animationParameters.vsize;
+        // angle += animationParameters.speed;
+        // size += animationParameters.vsize;
         // console.log(size);
         // animationParameters.size += animationParameters.v_size
         webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BIT);
         cube.draw(angle, 0, size);
+        // cube.draw(angle, 0, size);
         sphere.draw(angle, 0, size);
         // requestAnimationFrame(tick)
     }
@@ -193,7 +200,7 @@ function createCubeVertexBuffer(gl, program) {
        0.4, 1.0, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 1.0   // v4-v7-v6-v5 back
     ]);
 
-    const pointer = new Uint8Array([
+    const pointer = new Uint16Array([
         0, 1, 2,   0, 2, 3,    // front
         4, 5, 6,   4, 6, 7,    // right
         8, 9,10,   8,10,11,    // up
@@ -301,33 +308,49 @@ function createProjectionView(gl, program, x, angle = 0, size) {
     gl.uniformMatrix4fv(a_ProjectionViewMatrix, false, vM.elements);
 }
 
-
 function eventInitialion(canvas, gl, objects) {
-    canvas.addEventListener("click", ev => {
+    canvas.addEventListener("mouseup", ev => {
         // console.log(ev.clientX, ev.clientY);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BIT);
+        
         const canvasRect = ev.target.getBoundingClientRect();
         // console.log("ll")
         const x_in_webgl = ev.clientX - canvasRect.left;
         const y_in_webgl = ev.clientY - canvasRect.top;
         let arr = new Uint8Array(4);
-        
+        // objects.pop()
         // console.log(x_in_webgl, y_in_webgl)
-        objects.some(v => {
-            gl.useProgram(v.program);
-            const u_Click = gl.getUniformLocation(v.program, "u_Clicked");
-            gl.uniform1i(u_Click, true);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BIT);
+        objects.forEach(v => {
+            // gl.useProgram(v.program);
+            // const u_Click = gl.getUniformLocation(v.program, "u_Clicked");
+            // gl.uniform1i(u_Click, true);
+            // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BIT);
             v.draw(0, 1, 15);
+
+            // gl.readPixels(x_in_webgl, y_in_webgl, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, arr);
+            // console.log(arr);
+            // // gl.uniform1i(u_Click, false);
+            // // gl.useProgram(v.program);
+            // objects[0].draw(0, 1, 15);
         });
 
         gl.readPixels(x_in_webgl, y_in_webgl, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, arr);
-        console.log(arr);
+        
+        if(arr[0] === 255) {
+            console.log("cube")
+        } else if (arr[1] === 255) {
+            console.log("sphere")
+        } else {
+            console.log("canvas")
+        }
 
+
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         objects.some(v => {
-            gl.useProgram(v.program);
-            const u_Click = gl.getUniformLocation(v.program, "u_Clicked");
-            gl.uniform1i(u_Click, false);
-            v.draw(0, 1, 15);
+            // gl.useProgram(v.program);
+            // const u_Click = gl.getUniformLocation(v.program, "u_Clicked");
+            // gl.uniform1i(u_Click, false);
+            v.draw(0, 0, 15);
         });
 
 
