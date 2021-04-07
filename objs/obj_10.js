@@ -26,7 +26,7 @@ const VERTEX_SHADER_SPHERE = `
         if (u_Clicked) {
             v_Color = vec4(0.0, 1.0, 0.0, 1.0);
         } else {
-            v_Color = vec4(1.0, 1.0, 1.0, 1.0);
+            v_Color = vec4(1.0, 0.0, 0.0, 1.0);
         }
         
     }
@@ -51,27 +51,27 @@ const FRAG_SHADER_SPHERE = `
 
 class Cube {
     name = "cube";
+    angle = 0;
+    size = 15;
+    speed = 0;
     selectedColor = 255;
-    position = [2, 0, 0]
+    position = [2, -1, 0]
     constructor(webgl, program) {
-        // this.webgl = webgl;
-        // this.program = program;
         this.webgl = webgl;
         this.program = getProgram(webgl, VERTEX_SHADER_CUBE, FRAG_SHADER_CUBE);
     }
 
     draw(angle, y = 0, size) {
+        this.angle += this.speed;
         this.webgl.useProgram(this.program); 
         const u_Click = this.webgl.getUniformLocation(this.program, "u_Clicked");
         this.webgl.uniform1i(u_Click, y);
         this.number = createCubeVertexBuffer(this.webgl, this.program);
-        createProjectionView(this.webgl, this.program, this.position[0], angle, size);
-        // this.webgl.clear(this.webgl.COLOR_BUFFER_BIT | this.webgl.DEPTH_BUFFER_BIT);
+        createProjectionView(this.webgl, this.program, this.position, this.angle, size);
         this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_SHORT, 0);
     }
 
     click() {
-        // this.webgl.clear(this.webgl.COLOR_BUFFER_BIT | this.webgl.DEPTH_BIT);
         this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_SHORT, 0);
     }
 }
@@ -79,29 +79,60 @@ class Cube {
 class Sphere {
     name = "sphere";
     selectedColor = 226;
-    position = [-2, 0, 0]
-    constructor(webgl, program) {
-        // this.webgl = webgl;
-        // this.program = program;
+    angle = 0;
+    size = 15;
+    speed = 0;
+    position = [-2, -1, 0]
+    constructor(webgl) {
         this.webgl = webgl;
         this.program = getProgram(webgl, VERTEX_SHADER_SPHERE, FRAG_SHADER_CUBE);
     }
 
     draw(angle, y = 0, size) {
+        this.angle += this.speed;
         this.webgl.useProgram(this.program); 
         const u_Click = this.webgl.getUniformLocation(this.program, "u_Clicked");
         this.webgl.uniform1i(u_Click, y);
         this.number = createSphereVertexBuffer(this.webgl, this.program);
-        createProjectionView(this.webgl, this.program, this.position[0], angle, size);
-        // this.webgl.clear(this.webgl.COLOR_BUFFER_BIT | this.webgl.DEPTH_BUFFER_BIT);
+        createProjectionView(this.webgl, this.program, this.position, this.angle, size);
         this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_SHORT, 0);
     }
 
     click() {
-        // this.webgl.clear(this.webgl.COLOR_BUFFER_BIT | this.webgl.DEPTH_BIT);
         this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_SHORT, 0);
     }
 }
+
+class Cone {
+    name = "cone";
+    selectedColor = 226;
+    angle = 0;
+    size = 15;
+    speed = 0.5;
+    position = [0, 1.5, 0]
+    constructor(webgl) {
+        this.webgl = webgl;
+        this.program = getProgram(webgl, VERTEX_SHADER_CUBE, FRAG_SHADER_CUBE);
+    }
+
+    draw(angle, y = 0, size) {
+        this.angle += this.speed;
+        console.log(this.angle)
+        this.webgl.useProgram(this.program); 
+        const u_Click = this.webgl.getUniformLocation(this.program, "u_Clicked");
+        this.webgl.uniform1i(u_Click, 1);
+        this.number = createConeVertexBuffer(this.webgl, this.program);
+        createProjectionView(this.webgl, this.program, this.position, this.angle, size);
+        // console.log(this.number)
+        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_SHORT, 0);
+    }
+
+    click() {
+        this.webgl.drawElements(this.webgl.TRIANGLES, this.number, this.webgl.UNSIGNED_SHORT, 0);
+    }  
+}
+
+
 var animationParameters = {
     speed: 1,
     vsize: 0
@@ -113,9 +144,12 @@ function main() {
     // const program = getProgram(webgl, VERTEX_SHADER_CUBE, FRAG_SHADER_CUBE);
     const cube = new Cube(webgl);
     const sphere = new Sphere(webgl);
+    const cone = new Cone(webgl);
     webgl.clearColor(0.75, 0.85, 0.8, 0.9);
     webgl.enable(webgl.DEPTH_TEST);
     webgl.enable(webgl.CULL_FACE);
+    webgl.enable(webgl.POLYGON_OFFSET_FILL);
+	webgl.polygonOffset(1.0, 1.0);
 	webgl.frontFace(webgl.CCW);
 	webgl.cullFace(webgl.BACK);
     // webgl.useProgram(program);
@@ -127,10 +161,11 @@ function main() {
         // console.log(size);
         // animationParameters.size += animationParameters.v_size
         webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BIT);
-        cube.draw(angle, 0, size);
         // cube.draw(angle, 0, size);
+        cube.draw(angle, 0, size);
         sphere.draw(angle, 0, size);
-        // requestAnimationFrame(tick)
+        cone.draw(angle, 0, size);
+        // requestAnimationFrame(tick);
     }
     tick();
 };
@@ -144,9 +179,6 @@ function objectSelectedAnimation(object) {
     // }
     // start();
 }
-
-
-
 // initialize shaders and return program;
 function getProgram(gl, vshader, fshader) {
     const vShader = loadShader.call(gl, vshader, gl.VERTEX_SHADER);
@@ -216,9 +248,133 @@ function createCubeVertexBuffer(gl, program) {
     return pointer.length;
 
 }
+
+function Cone1 (resolution) {
+
+	var name = "cone";
+
+	// vertices definition
+	////////////////////////////////////////////////////////////
+	
+	var vertices = new Float32Array(3*(resolution+2));
+	
+	// apex of the cone
+	vertices[0] = 0.0;
+	vertices[1] = 2.0;
+	vertices[2] = 0.0;
+	
+	// base of the cone
+	var radius = 1.0;
+	var angle;
+	var step = 6.283185307179586476925286766559 / resolution;
+
+	var vertexoffset = 3;
+	for (var i = 0; i < resolution; i++) {
+	
+		angle = step * i;
+		
+		vertices[vertexoffset] = radius * Math.cos(angle);
+		vertices[vertexoffset+1] = 0.0;
+		vertices[vertexoffset+2] = radius * Math.sin(angle);
+		vertexoffset += 3;
+	}
+	
+	vertices[vertexoffset] = 0.0;
+	vertices[vertexoffset+1] = 0.0;
+	vertices[vertexoffset+2] = 0.0;
+	
+	// triangles defition
+	////////////////////////////////////////////////////////////
+	
+	var triangleIndices = new Uint16Array(3*2*resolution);
+	
+	// lateral surface
+	var triangleoffset = 0;
+	for (var i = 0; i < resolution; i++) {
+	
+		triangleIndices[triangleoffset] = 0;
+		triangleIndices[triangleoffset+1] = 1 + (i % resolution);
+		triangleIndices[triangleoffset+2] = 1 + ((i+1) % resolution);
+		triangleoffset += 3;
+	}
+	
+	// bottom part of the cone
+	for (var i = 0; i < resolution; i++) {
+	
+		triangleIndices[triangleoffset] = resolution+1;
+		triangleIndices[triangleoffset+1] = 1 + (i % resolution);
+		triangleIndices[triangleoffset+2] = 1 + ((i+1) % resolution);
+		triangleoffset += 3;
+	}
+
+    console.log(vertices, triangleIndices)
+}
+
+// Cone1(6);
+// vertexs for cone
+function createConeVertexBuffer(gl, program) {
+    const RADIUS = 1, TOP = [0, 1, 0], RESOLUTION = 16,
+    theta = (360 / RESOLUTION) * (Math.PI / 180),
+    BOTTOM = [0.0, 0.0, 0.0];
+    let vertex = [0.0, 2.0, 0.0];
+    // draw cirle on bottom
+    for (let index = 0; index < RESOLUTION; index++) {
+        let temp_vertex = [];
+        temp_vertex[0] = Math.cos(theta * index) * RADIUS;
+        temp_vertex[1] = 0.0;
+        temp_vertex[2] = Math.sin(theta * index) * RADIUS;
+        vertex = vertex.concat(temp_vertex);
+    }
+
+    vertex = vertex.concat(BOTTOM);
+    // vertex = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.5];
+    let indices = [];
+
+    //indices for bottom circle
+    for (let index = 0; index < RESOLUTION; index++) {
+        let temp_indices = [];
+        temp_indices[0] = RESOLUTION;
+        temp_indices[1] = 1 + (index % RESOLUTION); 
+        temp_indices[2] = 1 + ((index + 1) % RESOLUTION);
+        indices = indices.concat(temp_indices);
+    }
+
+    //indices for latery circle
+    for (let index = 0; index < RESOLUTION; index++) {
+        let temp_indices = [];
+        temp_indices[0] = 0; 
+        temp_indices[1] = 1 + (index % RESOLUTION); 
+        temp_indices[2] = 1 + ((index + 1) % RESOLUTION);
+        indices = indices.concat(temp_indices);
+    }
+
+    // console.log(indices);
+
+    //indices for bottom circle
+    for (let index = 0; index < RESOLUTION; index++) {
+        let temp_indices = [];
+        temp_indices[0] = RESOLUTION;
+        temp_indices[1] = 1 + (index % RESOLUTION); 
+        temp_indices[2] = 1 + ((index + 1) % RESOLUTION);
+        indices = indices.concat(temp_indices);
+    }
+    // console.log(indices)
+
+    // indices = [0, 1, 2];
+    loadBuffer(gl, new Float32Array(vertex), 'a_Position', program);
+    // loadBuffer(gl, color, 'a_Color', program);
+    loadBuffer(gl, new Uint16Array(indices), null, program, gl.ELEMENT_ARRAY_BUFFER);
+
+    return indices.length;
+
+    // console.log(indices)
+}
+
+// createConeVertexBuffer();
+
 // create vertes for sphere
 function createSphereVertexBuffer(gl, program) {
-    const RADIUS = 1.5, LAT = 50, LNG = 50;
+    const RADIUS = 1.5, LAT = 10, LNG = 10;
     let vertex = [];
     for (let n = 0; n <= LAT; n++) {
         const zita =  2 * Math.PI * (n / LAT);
@@ -300,9 +456,9 @@ function createProjectionView(gl, program, x, angle = 0, size) {
     //     size = 20 - size;
     // }
     
-    vM.setPerspective(30.0, 1.0, 1.0, 100.0).lookAt(1, 3, size, 0, 0, 0, 0, 1, 0);
+    vM.setPerspective(30.0, 1.0, 1.0, 100.0).lookAt(1, 3, 15, 0, 0, 0, 0, 1, 0);
     // vM.setPerspective(60, 1, 1, 100).lookAt(1, 3, 10, 0, 0, 0, 0, 1, 0);
-    rM.setTranslate(x, 0, 0).rotate(angle, 1.0, 1.0, 0);
+    rM.setTranslate(x[0], x[1], x[2]).rotate(120, 1.0, 0.0, 0.0);
     vM.multiply(rM);
     const a_ProjectionViewMatrix = gl.getUniformLocation(program, "a_ProjectionViewMatrix");
     gl.uniformMatrix4fv(a_ProjectionViewMatrix, false, vM.elements);
@@ -337,9 +493,9 @@ function eventInitialion(canvas, gl, objects) {
         gl.readPixels(x_in_webgl, y_in_webgl, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, arr);
         
         if(arr[0] === 255) {
-            console.log("cube")
+            objects[0].speed = 0.5;
         } else if (arr[1] === 255) {
-            console.log("sphere")
+            objects[1].speed = 0.5;
         } else {
             console.log("canvas")
         }
@@ -358,7 +514,6 @@ function eventInitialion(canvas, gl, objects) {
 }
 
 function check(gl, x, y, target, u_Click, arr) {
-    // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BIT);
     let t = null;
     gl.uniform1i(u_Click, 1);
     target.draw(0, 1, 15);
