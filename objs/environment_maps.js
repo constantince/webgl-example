@@ -1,30 +1,30 @@
 const VERTEX_SHADER = `
     attribute vec4 a_Position;
-    uniform vec3 a_Normal;
+    attribute vec3 a_Normal;
     uniform mat4 u_ProjectionMatrix;
     uniform mat4 u_WorldMatrix;
     uniform mat4 u_ViewMatrix;
 
-    varying mat4 m_WorldPosition;
-    varying mat4 m_WorldNormal;
+    varying vec3 m_WorldPosition;
+    varying vec3 m_WorldNormal;
     void main() {
         gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_WorldMatrix * a_Position;
-        m_WorldPosition = u_WorldMatrix * a_Position;
-        m_WorldNormal = u_WorldMatrix * a_Normal; 
+        m_WorldPosition = (u_WorldMatrix * a_Position).xyz;
+        m_WorldNormal = mat3(u_WorldMatrix) * a_Normal; 
     }
 `;
 
 const FRAGMENT_SHADER = `
-    precision mediump float;
-    varying mat4 m_WorldPosition;
-    varying mat4 m_WorldNormal;
+    precision highp float;
+    varying vec3 m_WorldPosition;
+    varying vec3 m_WorldNormal;
 
     uniform samplerCube u_texture;
-    uniform vec4 u_cameraPosition;
+    uniform vec3 u_cameraPosition;
     void main() {
-        vec4 worldNormal = normalize(m_WorldNormal);
-        vec4 eyeToSurfaceDir = normalize(m_WorldPosition - u_cameraPosition);
-        vec4 direction = reflect(eyeToSurfaceDir, worldNormal);
+        vec3 worldNormal = normalize(m_WorldNormal);
+        vec3 eyeToSurfaceDir = normalize(m_WorldPosition - u_cameraPosition);
+        vec3 direction = reflect(eyeToSurfaceDir, worldNormal);
 
         gl_FragColor = textureCube(u_texture, direction);
     }
@@ -40,8 +40,7 @@ function main() {
     //initialize the shaders
     const program = myInitShader(webgl, VERTEX_SHADER, FRAGMENT_SHADER);
     webgl.useProgram(program);
-    //initialize matrix;
-    create_matrix(webgl, program);
+    
 
     //create vertices and indices;
     const verticesAndIndices = cubeVertex();
@@ -54,12 +53,18 @@ function main() {
 
     //create cube_map
 
-    // create_cube_map(webgl);
+    create_cube_map(webgl);
+    let start = 0, speed = 0.5;
+    var tick = () => {
+        start += speed;
+        //initialize matrix;
+        create_matrix(webgl, program, start);
+        webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BUFFER_BIT);
+        webgl.drawElements(webgl.TRIANGLES, verticesAndIndices.len, webgl.UNSIGNED_SHORT, 0);
+        requestAnimationFrame(tick)
+    }
     
-    // start drawing objects
-    
-    webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BUFFER_BIT);
-    webgl.drawElements(webgl.TRIANGLES, verticesAndIndices.len, webgl.UNSIGNED_SHORT, 0);
+     tick();
 
 }
 
@@ -96,6 +101,7 @@ function create_cube_map(gl) {
     faceInfos.forEach(v => {
         const {target, url} = v;
         const image = new Image();
+        image.crossOrigin = "";
         const LEVEL = 0,
         FORMAT = gl.RGBA, width = 512,
         height = 512, type = gl.UNSIGNED_BYTE;
@@ -106,33 +112,43 @@ function create_cube_map(gl) {
             gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
         }
         image.src = url;
-        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-        gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     });
+
+    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 
 }
 
-function create_matrix(gl, program) {
+function create_matrix(gl, program, y) {
     const ProjectionMatrix = gl.getUniformLocation(program, "u_ProjectionMatrix");
-    const CameraMatrix = gl.getUniformLocation(program, "u_cameraPosition");
+    const CameraMatrixLocation = gl.getUniformLocation(program, "u_cameraPosition");
     const WorldMatrix = gl.getUniformLocation(program, "u_WorldMatrix");
 
     const ViewMatrix = gl.getUniformLocation(program, "u_ViewMatrix");
 
     // myInitMatrix(webgl, viewProjectionMatrix);
     const pM = new Matrix4();
-    pM.setPerspective(30.0, 1.0, 1.0, 100.0)
-    const cM = new Matrix4();
-    cM.lookAt(1, 3, 5, 0, 0, 0, 0, 1, 0);
+    pM.setPerspective(30.0, 1.0, 1.0, 100.0);
+    // gl.uniformMatrix4fv(ProjectionMatrix, false, pM.elements);
+    // const cM = new Matrix4();
+
+    var cameraPosition = [0, 0, 2];
+    var target = [0, 0, 0];
+    var up = [0, 1, 0];
+    // Compute the camera's matrix using look at.
+    // var cameraMatrix = new Matrix4();
+    // cameraMatrix.lookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+
     const wM = new Matrix4();
-    wM.setRotate(10, 0, 1, 0);
+    wM.setRotate(y, 1, 0, 0);
 
     const vM = new Matrix4();
-    vM.setInVerseof(cM);
-    vM.transpose();
+    vM.lookAt(0, 0, 10, 0, 0, 0, 0, 1, 0);
+    // vM.setInverseOf(cameraMatrix);
+    // vM.transpose();
 
     gl.uniformMatrix4fv(ProjectionMatrix, false, pM.elements);
-    gl.uniformMatrix4fv(CameraMatrix, false, cM.elements);
     gl.uniformMatrix4fv(WorldMatrix, false, wM.elements);
-    gl.uniformMatrix4fv(ViewMatrix, false, vM.elements)
+    gl.uniformMatrix4fv(ViewMatrix, false, vM.elements);
+    gl.uniform3fv(CameraMatrixLocation, [0, 0, 5]);
 }
