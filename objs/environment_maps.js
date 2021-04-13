@@ -140,7 +140,7 @@ function create_matrix(gl, program, y) {
     // cameraMatrix.lookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
 
     const wM = new Matrix4();
-    wM.setRotate(y, 1, 0, 0);
+    wM.setRotate(y, 1, 0, 1);
 
     const vM = new Matrix4();
     vM.lookAt(0, 0, 10, 0, 0, 0, 0, 1, 0);
