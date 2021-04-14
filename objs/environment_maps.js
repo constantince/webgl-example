@@ -118,37 +118,75 @@ function create_cube_map(gl) {
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 
 }
+function degToRad(d) {
+  return d * Math.PI / 180;
+}
+var fieldOfViewRadians = degToRad(60);
+var modelXRotationRadians = degToRad(0);
+var modelYRotationRadians = degToRad(0);
+var then = 0;
+function create_matrix(gl, program, time) {
 
-function create_matrix(gl, program, y) {
+   // convert to seconds
+   time *= 0.1;
+   // Subtract the previous time from the current time
+   var deltaTime = time - then;
+   // Remember the current time for the next frame.
+   then = time;
+
     const ProjectionMatrix = gl.getUniformLocation(program, "u_ProjectionMatrix");
     const CameraMatrixLocation = gl.getUniformLocation(program, "u_cameraPosition");
     const WorldMatrix = gl.getUniformLocation(program, "u_WorldMatrix");
-
     const ViewMatrix = gl.getUniformLocation(program, "u_ViewMatrix");
+    // Animate the rotation
+    modelYRotationRadians += -0.7 * deltaTime;
+    modelXRotationRadians += -0.4 * deltaTime;
 
-    // myInitMatrix(webgl, viewProjectionMatrix);
-    const pM = new Matrix4();
-    pM.setPerspective(30.0, 1.0, 1.0, 100.0);
-    // gl.uniformMatrix4fv(ProjectionMatrix, false, pM.elements);
-    // const cM = new Matrix4();
+    const projection = mat4.create();
+    mat4.identity(projection)
+    mat4.perspective(projection, glMatrix.toRadian(60), 1.0, 1.0, 100.0);
+    gl.uniformMatrix4fv(ProjectionMatrix, false, projection);
 
-    var cameraPosition = [0, 0, 2];
+
+    var cameraPosition = [0, 0, 5];
     var target = [0, 0, 0];
     var up = [0, 1, 0];
     // Compute the camera's matrix using look at.
-    // var cameraMatrix = new Matrix4();
-    // cameraMatrix.lookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+    var cameraMatrix = mat4.create();
+    mat4.identity(cameraMatrix);
+    mat4.lookAt(cameraMatrix, cameraPosition, target, up);
 
-    const wM = new Matrix4();
-    wM.setRotate(y, 1, 0, 1);
+    const worldMatrix = mat4.create();
+    mat4.identity(worldMatrix);
+    mat4.rotateX(worldMatrix, worldMatrix, modelYRotationRadians);
 
-    const vM = new Matrix4();
-    vM.lookAt(0, 0, 10, 0, 0, 0, 0, 1, 0);
-    // vM.setInverseOf(cameraMatrix);
-    // vM.transpose();
+    // var viewMatrix = mat4.create();
+    // mat4.identity(viewMatrix);
+    // mat4.invert(viewMatrix, cameraMatrix);
+    // console.log(viewMatrix)
 
-    gl.uniformMatrix4fv(ProjectionMatrix, false, pM.elements);
-    gl.uniformMatrix4fv(WorldMatrix, false, wM.elements);
-    gl.uniformMatrix4fv(ViewMatrix, false, vM.elements);
-    gl.uniform3fv(CameraMatrixLocation, [0, 0, 5]);
+
+    //--------------------------------
+
+    // var projection =
+    //     m4.perspective(glMatrix.toRadian(30), 1, 1, 200);
+    // gl.uniformMatrix4fv(ProjectionMatrix, false, projection);
+
+    // var cameraPosition = [0, 0, 5];
+    // var target = [0, 0, 0];
+    // var up = [0, 1, 0];
+    // // Compute the camera's matrix using look at.
+    // var cameraMatrix = m4.lookAt(cameraPosition, target, up);
+    // console.log(cameraMatrix)
+    // // Make a view matrix from the camera matrix.
+    // var viewMatrix = m4.inverse(cameraMatrix);
+    
+
+    // var worldMatrix = m4.xRotation(modelXRotationRadians);
+    // worldMatrix = m4.yRotate(worldMatrix, modelYRotationRadians);
+
+    gl.uniformMatrix4fv(ProjectionMatrix, false, projection);
+    gl.uniformMatrix4fv(WorldMatrix, false, worldMatrix);
+    gl.uniformMatrix4fv(ViewMatrix, false, cameraMatrix);
+    gl.uniform3fv(CameraMatrixLocation, cameraPosition);
 }

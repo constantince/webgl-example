@@ -123,6 +123,7 @@ function degToRad(d) {
   }
 
 var fieldOfViewRadians = degToRad(60);
+
 function create_matrix(gl, program, time) {
     const skyboxLocation = gl.getUniformLocation(program, "u_Skybox");
     const viewDirectionProjectionInverseLocation = gl.getUniformLocation(program, "u_SkyboxProjection");
@@ -134,33 +135,39 @@ function create_matrix(gl, program, time) {
     then = time;
     // Compute the projection matrix
     var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-    var projectionMatrix =
-        m4.perspective(fieldOfViewRadians, aspect, 1, 2000);
+    const projection_matrix = mat4.create();
+    const sky_box_matrix = mat4.create();
+    const camera_matrix = mat4.create();
+    mat4.identity(projection_matrix);
+    mat4.identity(sky_box_matrix);
+    mat4.identity(camera_matrix);
 
+    mat4.perspective(projection_matrix, glMatrix.toRadian(60), aspect, 1, 2000);
+    
     // camera going in circle 2 units from origin looking at origin
-    var cameraPosition = [Math.cos(time * .1), 0, Math.sin(time * .1)];
+    var cameraPosition = [Math.cos(time * -.1), 0, Math.sin(time * -.1)];
     var target = [0, 0, 0];
     var up = [0, 1, 0];
+
     // Compute the camera's matrix using look at.
-    var cameraMatrix = m4.lookAt(cameraPosition, target, up);
+    mat4.lookAt(camera_matrix, cameraPosition, target, up);
 
     // Make a view matrix from the camera matrix.
-    var viewMatrix = m4.inverse(cameraMatrix);
+    var viewMatrix = mat4.invert(mat4.create(), camera_matrix);
 
     // We only care about direciton so remove the translation
     viewMatrix[12] = 0;
     viewMatrix[13] = 0;
     viewMatrix[14] = 0;
 
-    var viewDirectionProjectionMatrix =
-        m4.multiply(projectionMatrix, viewMatrix);
-    var viewDirectionProjectionInverseMatrix =
-        m4.inverse(viewDirectionProjectionMatrix);
+    mat4.multiply(projection_matrix, projection_matrix, viewMatrix);
+
+    mat4.invert(projection_matrix, projection_matrix);
 
     // Set the uniforms
     gl.uniformMatrix4fv(
         viewDirectionProjectionInverseLocation, false,
-        viewDirectionProjectionInverseMatrix);
+        projection_matrix);
 
     // Tell the shader to use texture unit 0 for u_skybox
     gl.uniform1i(skyboxLocation, 0);
@@ -169,10 +176,5 @@ function create_matrix(gl, program, time) {
     gl.depthFunc(gl.LEQUAL);
 
     return;
-    
-
-    // gl.uniformMatrix4fv(WorldMatrix, false, wM.elements);
-    // gl.uniformMatrix4fv(ViewMatrix, false, vM.elements);
-    // gl.uniform3fv(CameraMatrixLocation, [0, 0, 5]);
     
 }
