@@ -148,7 +148,8 @@ function create_matrix(gl, program, time) {
     gl.uniformMatrix4fv(ProjectionMatrix, false, projection);
 
 
-    var cameraPosition = [0, 0, 5];
+    // var cameraPosition = [0, 0, 5];
+    var cameraPosition = [Math.cos(time * .1) * 5, 0, Math.sin(time * .1) * 5];
     var target = [0, 0, 0];
     var up = [0, 1, 0];
     // Compute the camera's matrix using look at.
@@ -160,9 +161,9 @@ function create_matrix(gl, program, time) {
     mat4.identity(worldMatrix);
     mat4.rotateX(worldMatrix, worldMatrix, modelYRotationRadians);
 
-    // var viewMatrix = mat4.create();
-    // mat4.identity(viewMatrix);
-    // mat4.invert(viewMatrix, cameraMatrix);
+    var viewMatrix = mat4.create();
+    mat4.identity(viewMatrix);
+    mat4.invert(viewMatrix, cameraMatrix);
     // console.log(viewMatrix)
 
 

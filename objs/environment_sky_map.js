@@ -113,109 +113,6 @@ function create_cube_map(gl) {
 
 }
 
-function create_matrix(gl, program, time = 1) {
-    // convert to seconds
-    time *= 0.01;
-    // Subtract the previous time from the current time
-    var deltaTime = time - then;
-    // console.log(time, then, deltaTime)
-    // Remember the current time for the next frame.
-    then = time;
-
-     // Animate the rotation
-     modelYRotationRadians += -0.7 * deltaTime;
-     modelXRotationRadians += -0.4 * deltaTime;
-
-    const ProjectionMatrix = gl.getUniformLocation(program, "u_ProjectionMatrix");
-    const CameraMatrixLocation = gl.getUniformLocation(program, "u_cameraPosition");
-    const WorldMatrix = gl.getUniformLocation(program, "u_WorldMatrix");
-    const ViewMatrix = gl.getUniformLocation(program, "u_ViewMatrix");
-
-    const projection = mat4.create();
-    mat4.identity(projection)
-    mat4.perspective(projection, glMatrix.toRadian(60), 1.0, 1.0, 100.0);
-
-    var cameraPosition = [0, 0, 5];
-    var target = [0, 0, 0];
-    var up = [0, 1, 0];
-    // Compute the camera's matrix using look at.
-    var cameraMatrix = mat4.create();
-    mat4.identity(cameraMatrix);
-    mat4.lookAt(cameraMatrix, cameraPosition, target, up);
-
-    const wM = mat4.create();
-    mat4.identity(wM);
-
-    mat4.rotateX(wM, wM, modelXRotationRadians);
-    mat4.rotateY(wM, wM, modelYRotationRadians);
-
-
-    const vM = mat4.create();
-    mat4.identity(vM);
-    mat4.lookAt(vM, cameraPosition, target, up);
-
-    gl.uniformMatrix4fv(ProjectionMatrix, false, projection);
-    gl.uniformMatrix4fv(WorldMatrix, false, wM);
-    gl.uniformMatrix4fv(ViewMatrix, false, vM);
-    gl.uniform3fv(CameraMatrixLocation, cameraPosition);
-}
-
-function create_matrix2(gl, program, time) {
-    gl.useProgram(program);
-    const skyboxLocation = gl.getUniformLocation(program, "u_Skybox");
-    const viewDirectionProjectionInverseLocation = gl.getUniformLocation(program, "u_SkyboxProjection");
-    // convert to seconds
-    time *= 0.1;
-    // Subtract the previous time from the current time
-    // var deltaTime = time - then;
-    // Remember the current time for the next frame.
-    // then = time;
-    // Compute the projection matrix
-    var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-    // const projection_matrix = mat4.create();
-    // const sky_box_matrix = mat4.create();
-    // const camera_matrix = mat4.create();
-    // mat4.identity(projection_matrix);
-    // mat4.identity(sky_box_matrix);
-    // mat4.identity(camera_matrix);
-
-    // mat4.perspective(projection_matrix, glMatrix.toRadian(60), aspect, 1, 2000);
-    
-    // camera going in circle 2 units from origin looking at origin
-    var cameraPosition = [Math.cos(time * .1) * 2, 0, Math.sin(time * .1) * 2];
-    var target = [0, 0, 0];
-    var up = [0, 1, 0];
-
-    // Compute the camera's matrix using look at.
-    mat4.lookAt(camera_matrix, cameraPosition, target, up);
-
-    // Make a view matrix from the camera matrix.
-    var viewMatrix = mat4.invert(mat4.create(), camera_matrix);
-
-    // We only care about direciton so remove the translation
-    viewMatrix[12] = 0;
-    viewMatrix[13] = 0;
-    viewMatrix[14] = 0;
-
-    // mat4.multiply(projection_matrix, projection_matrix, viewMatrix);
-
-    // mat4.invert(projection_matrix, projection_matrix);
-
-    // Set the uniforms
-    gl.uniformMatrix4fv(
-        viewDirectionProjectionInverseLocation, false,
-        projection_matrix);
-
-    // Tell the shader to use texture unit 0 for u_skybox
-    gl.uniform1i(skyboxLocation, 0);
-
-    // let our quad pass the depth test at 1.0
-    gl.depthFunc(gl.LEQUAL);
-
-    return;
-    
-}
-
 function main() {
     const canvas = document.getElementById("cube");
     const webgl = canvas.getContext("webgl");
@@ -241,48 +138,6 @@ function main() {
 
 }
 
-// 反射纹理程序1
-function switchToReflectProgram(webgl, program1, program2, start) {
-    webgl.useProgram(program);
-    const verticesAndIndices = cubeVertex();
-    // initialize buffers;
-    myInitBuffer(webgl, program, verticesAndIndices.vertices, 'a_Position', 3);
-    myInitBuffer(webgl, program, verticesAndIndices.normals, 'a_Normal', 3);
-    myInitBuffer(webgl, program, verticesAndIndices.triangleIndices, undefined, undefined, true);
-
-    //draw sence
-    create_matrix1(webgl, program, start);
-
-    webgl.drawElements(webgl.TRIANGLES, verticesAndIndices.len, webgl.UNSIGNED_SHORT, 0);
-}
-
-// 环境纹理程序
-function switchToSkyBoxProgram(webgl, program, start) {
-    webgl.useProgram(program);
-    //create vertices and indices;
-    // const verticesAndIndices = cubeVertex();
-    const vertices = new Float32Array([
-      -1, -1,
-       1, -1,
-      -1,  1,
-      -1,  1,
-       1, -1,
-       1,  1,
-    ])
-    // initialize buffers;
-    myInitBuffer(webgl, program, vertices, 'a_Position', 2);
-
-    // draw sence
-    create_matrix2(webgl, program, start);
-
-    webgl.drawArrays(webgl.TRIANGLES, 0, 6);
-
-
-
-
-
-
-}
 
 // draw sense
 function drawSence(gl, program1, program2, time) {
@@ -307,8 +162,8 @@ function drawSence(gl, program1, program2, time) {
     then = time;
     // console.log(time)
      // Animate the rotation
-     modelYRotationRadians += -0.7 * deltaTime;
-     modelXRotationRadians += -0.4 * deltaTime;
+    //  modelYRotationRadians += -0.7 * deltaTime;
+    //  modelXRotationRadians += -0.4 * deltaTime;
 
     const ProjectionMatrix = gl.getUniformLocation(program1, "u_ProjectionMatrix");
     const CameraMatrixLocation = gl.getUniformLocation(program1, "u_cameraPosition");
@@ -317,9 +172,10 @@ function drawSence(gl, program1, program2, time) {
 
     const projection = mat4.create();
     mat4.identity(projection)
-    mat4.perspective(projection, glMatrix.toRadian(60), 1.0, 1.0, 100.0);
+    mat4.perspective(projection, glMatrix.toRadian(30), 1.0, 1.0, 2000.0);
 
-    var cameraPosition = [Math.cos(time * .1) * 5, 0, Math.sin(time * .1) * 5];
+    var cameraPosition = [Math.cos(time * -.1) * 7, 0, Math.sin(time * -.1) * 7];
+    // var cameraPosition = [0, 0, 10];
     var target = [0, 0, 0];
     var up = [0, 1, 0];
     // Compute the camera's matrix using look at.
@@ -330,24 +186,26 @@ function drawSence(gl, program1, program2, time) {
     const wM = mat4.create();
     mat4.identity(wM);
 
-    mat4.rotateX(wM, wM, modelXRotationRadians);
-    mat4.rotateY(wM, wM, modelYRotationRadians);
+    mat4.rotateX(wM, wM, time * .01);
+    mat4.rotateY(wM, wM, time * .01);
 
 
-    const vM = mat4.create();
-    mat4.identity(vM);
-    mat4.lookAt(vM, cameraPosition, target, up);
+    // const vM = mat4.create();
+    // mat4.identity(vM);
+    // mat4.invert(vM, cameraMatrix);
+
+    gl.depthFunc(gl.LESS);  // use the default depth test
 
     gl.uniformMatrix4fv(ProjectionMatrix, false, projection);
     gl.uniformMatrix4fv(WorldMatrix, false, wM);
-    gl.uniformMatrix4fv(ViewMatrix, false, vM);
+    gl.uniformMatrix4fv(ViewMatrix, false, cameraMatrix);
     gl.uniform3fv(CameraMatrixLocation, cameraPosition);
 
     webgl.drawElements(gl.TRIANGLES, verticesAndIndices.len, gl.UNSIGNED_SHORT, 0);
 
     //-------------
-
     // draw sky
+    gl.depthFunc(gl.LEQUAL);
     webgl.useProgram(program2);
     const skyboxLocation = gl.getUniformLocation(program2, "u_Skybox");
     const viewDirectionProjectionInverseLocation = gl.getUniformLocation(program2, "u_SkyboxProjection");
@@ -363,22 +221,40 @@ function drawSence(gl, program1, program2, time) {
       // initialize buffers;
     myInitBuffer(webgl, program2, vertices, 'a_Position', 2);
   
-    var viewDirectionMatrix = mat4.create();
-    mat4.identity(viewDirectionMatrix);
-    mat4.copy(viewDirectionMatrix, vM);
-    // console.log(vM);
-    viewDirectionMatrix[12] = 0;
-    viewDirectionMatrix[13] = 0;
-    viewDirectionMatrix[14] = 0;
+    var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+    const projection_matrix = mat4.create();
+    const sky_box_matrix = mat4.create();
+    const camera_matrix = mat4.create();
+    mat4.identity(projection_matrix);
+    mat4.identity(sky_box_matrix);
+    mat4.identity(camera_matrix);
 
-    var viewDirectionProjectionMatrix = mat4.create();
-    // mat4.identity(viewDirectionProjectionMatrix);
-    mat4.multiply(viewDirectionProjectionMatrix, projection, vM);
-    mat4.invert(viewDirectionProjectionMatrix, viewDirectionProjectionMatrix);
-     // Set the uniforms
-     gl.uniformMatrix4fv(
+    mat4.perspective(projection_matrix, glMatrix.toRadian(60), aspect, 1, 2000);
+    
+    // camera going in circle 2 units from origin looking at origin
+    var cameraPosition = [Math.cos(time * -.1), 0, Math.sin(time * -.1)];
+    var target = [0, 0, 0];
+    var up = [0, 1, 0];
+
+    // Compute the camera's matrix using look at.
+    mat4.lookAt(camera_matrix, cameraPosition, target, up);
+
+    // Make a view matrix from the camera matrix.
+    var viewMatrix = mat4.invert(mat4.create(), camera_matrix);
+
+    // We only care about direciton so remove the translation
+    viewMatrix[12] = 0;
+    viewMatrix[13] = 0;
+    viewMatrix[14] = 0;
+
+    mat4.multiply(projection_matrix, projection_matrix, viewMatrix);
+
+    mat4.invert(projection_matrix, projection_matrix);
+
+    // Set the uniforms
+    gl.uniformMatrix4fv(
         viewDirectionProjectionInverseLocation, false,
-        viewDirectionProjectionMatrix);
+        projection_matrix);
 
     // Tell the shader to use texture unit 0 for u_skybox
     gl.uniform1i(skyboxLocation, 0);
@@ -386,6 +262,9 @@ function drawSence(gl, program1, program2, time) {
     // let our quad pass the depth test at 1.0
     gl.depthFunc(gl.LEQUAL);
 
+    // let our quad pass the depth test at 1.0
+    // gl.depthFunc(gl.LEQUAL);
+// console.log("hei")
     webgl.drawArrays(gl.TRIANGLES, 0, 6);
     
 }

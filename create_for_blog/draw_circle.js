@@ -87,7 +87,7 @@ function main() {
   
   gl.useProgram(program);
   // 三角形的个数
-  const counts = 50;
+  const counts = 150;
   const points = calculatePoints(counts);
 
 
@@ -100,7 +100,7 @@ function main() {
   gl.clear(gl.COLOR_BUFFER_BIT);
 
     // 执行画点的指令
-  gl.drawArrays(gl.TRIANGLE_FAN, 0, counts + 2);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, counts + 2);
 }
 
 //计算出五角星的各个点的位置
@@ -114,10 +114,16 @@ function calculatePoints(counts) {
 
     let vertexs = [].concat(center);
     for (let index = 0; index <= counts; index++) {
-        let x = Math.sin(radiation * index) * radius;
-        let y = Math.cos(radiation * index) * radius;
-        vertexs.push(x);
-        vertexs.push(y);
+        if (index % 2 === 0) {
+          let x = Math.sin(radiation * index) * radius;
+          let y = Math.cos(radiation * index) * radius;
+          vertexs.push(x);
+          vertexs.push(y);
+        } else {
+          vertexs.push(0);
+          vertexs.push(0);
+        }
+        
     }
     console.log(vertexs);
     return new Float32Array(vertexs);
