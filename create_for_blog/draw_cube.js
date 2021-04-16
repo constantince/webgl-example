@@ -55,7 +55,7 @@ function myInitBuffer(gl, program, data, name, size, type = false) {
     }
 }
 
-function myinitMatrix(gl, program) {
+function myinitMatrix(gl, program, rad) {
     // 投影矩阵
     const pM = mat4.create();
     mat4.identity(pM)
@@ -69,8 +69,8 @@ function myinitMatrix(gl, program) {
     //模型矩阵 
     const fM = mat4.create();
     mat4.identity(fM)
-    mat4.rotateX(fM, fM, glMatrix.toRadian(20));
-    mat4.rotateY(fM, fM, glMatrix.toRadian(20));
+    mat4.rotateX(fM, fM, glMatrix.toRadian(rad));
+    mat4.rotateY(fM, fM, glMatrix.toRadian(rad));
 
     // 赋值uniform
     const projectionMatrixLocation = gl.getUniformLocation(program, "u_ProjectionMatrix");
@@ -132,18 +132,23 @@ function main() {
   myInitBuffer(gl, program, vertexs, 'a_Position', 3);
   myInitBuffer(gl, program, color, 'a_Color', 3);
   myInitBuffer(gl, program, pointer, null, null, true);
-  
+  let start = 0, speed = 0.5;
+  var tick = () => {
+    start += speed;
+    // 绘制场景
+    myinitMatrix(gl, program, start);
+    // 指定清除canvas的颜色
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-  //绘制场景
-  myinitMatrix(gl, program);
-  // 指定清除canvas的颜色
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    // 清除canvas
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  // 清除canvas
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // 执行正方形的指令
+    gl.drawElements(gl.TRIANGLES, len, gl.UNSIGNED_SHORT, 0);
 
-    // 执行画点的指令
-  gl.drawElements(gl.TRIANGLES, len, gl.UNSIGNED_SHORT, 0);
+    requestAnimationFrame(tick);
+  }
+  tick();
 }
 
 //计算出立方体的各个点的位置

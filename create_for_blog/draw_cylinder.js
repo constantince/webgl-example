@@ -93,7 +93,7 @@ var VSHADER_SOURCE = `
   varying vec4 v_Color;
   void main() {
     gl_Position = u_ProjectionMatrix * u_WorldMatrix * u_RoateMatrix * a_Position;
-    v_Color = vec4(1.0, 1.0, 1.0, 1.0);
+    v_Color = vec4(1.0, 0.0, 0.0, 1.0);
 }`
 
 // 片元着色器
@@ -104,7 +104,7 @@ var FSHADER_SOURCE =`
     gl_FragColor = v_Color;
 }`
 
-// 顶点着色器。
+// 顶点着色器-线条。
 var VSHADER_SOURCE_LINE = `
   attribute vec4 a_Position;
   attribute vec4 a_Color;
@@ -118,7 +118,7 @@ var VSHADER_SOURCE_LINE = `
     v_Color = a_Color;
 }`
 
-// 片元着色器
+// 片元着色器-线条
 var FSHADER_SOURCE_LINE =`
   precision mediump float;
   varying vec4 v_Color;
@@ -149,70 +149,64 @@ function main() {
   }
   
   
-  const {pointer, vertexs, len, colors} = calculatePoints();
- 
-
-
+  const {pointer, vertexs, len, linePointer} = calculatePoints();
+  // 绘制圆柱体
   function drawCylinder(start) {
+    //切换程序
     gl.useProgram(program);
-    
     myInitBuffer(gl, program, vertexs, 'a_Position', 3);
-    // myInitBuffer(gl, program, colors, 'a_Color', 3);
     myInitBuffer(gl, program, pointer, null, null, true);
-
      //绘制场景
-     myinitMatrix(gl, program, start);
-
-     // 执行画点的指令
+    myinitMatrix(gl, program, start);
+    // 执行画点的指令
     gl.drawElements(gl.TRIANGLE_STRIP, len, gl.UNSIGNED_SHORT, 0);
 
   }
-
+  //绘制表面线条
   function drawLine() {
     gl.useProgram(program1);
     myInitBuffer(gl, program1, vertexs, 'a_Position', 3);
+    myInitBuffer(gl, program1, linePointer, null, null, true);
     //绘制场景
     myinitMatrix(gl, program1, start);
-    // 执行画点的指令
-    gl.drawArrays(gl.LINE_STRIP, 0, vertexs.length/3);
+    // 执行画线条的指令
+    gl.drawElements(gl.LINES, linePointer.length / 2, gl.UNSIGNED_SHORT, 0);
   }
 
- WebGL2RenderingContext.
-  
-
-  
   // 指定清除canvas的颜色
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
   let start = 0, speed = 0.5;
   var tick = function() {
     start += speed;
        // 清除canvas
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+	  gl.polygonOffset(1.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // drawCylinder(start);
+    drawCylinder(start);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+    // 为了方便，我们也换出紧贴表面的视觉引导线
     drawLine(start);
-   
-
-    // requestAnimationFrame(tick);
+    requestAnimationFrame(tick);
   }
   
   tick();
 }
 
-//计算出圆柱体的各个点的位置
+//计算出圆柱体以及表面线条的各个点的位置
 function calculatePoints() {
-    const TOP = [0, 2, 0], RADIUS = 1, RESOLUTION = 30, BOTTOM = [0, 0, 0],
+    //高，顶面圆中心点位置，粗细，分辨率，底面圆中心位置
+    const HEIGHT = 2, TOP = [0, HEIGHT, 0], RADIUS = 1, RESOLUTION = 50, BOTTOM = [0, 0, 0],
     theta = 360 / RESOLUTION * Math.PI / 180;
     let vertexs = [];
-    let colors = [];
+    // 分别计算出上下表面圆边上的点
     for (let index = 0; index < RESOLUTION; index++) {
         const x = Math.cos(theta * index) * RADIUS;
         const z = Math.sin(theta * index) * RADIUS;
-        const UADvetices = [x, 2, z, x, 0, z];
+        const UADvetices = [x, HEIGHT, z, x, 0, z];
         vertexs = vertexs.concat(UADvetices);
     }
-    // 顶点位置0，其他点1~resolution 底部中心点的位置 resolution + 1;
+    // 其他点1~resolution 底部中心点的位置 resolution + 1; 顶点位置 resolution，
     vertexs = vertexs.concat(BOTTOM).concat(TOP);
-    colors = [Math.random(1), Math.random(1), Math.random(1)].concat(vertexs).concat([Math.random(1), Math.random(1), Math.random(1)]);
     let pointer = [];
     // //斜边
     for (let index = 0; index < RESOLUTION * 2; index++) {
@@ -225,10 +219,18 @@ function calculatePoints() {
         pointer.push( (index + 2) % (RESOLUTION * 2) );
 
     }
-
-    
- 
-
+    let linePointer = [];
+    for (let index = 0; index < RESOLUTION * 2; index++) {
+      // 第一条线
+      linePointer.push( 2 * RESOLUTION + 1); // 上表面中心
+      linePointer.push( 2 * index); // 上表面边上的一点
+      // 第二条线
+      linePointer.push( 2 * index); //上表面边上的一点
+      linePointer.push( 2 * index + 1) ;//下表面边上的一点
+      // 第三条线
+      linePointer.push( 2 * index + 1) ;//下表面边上的一点
+      linePointer.push( 2 * RESOLUTION );// 下表面中心
+  }
 
     //底边
     for (let index = 0; index < RESOLUTION; index++) {
@@ -236,23 +238,23 @@ function calculatePoints() {
         const step2 = (2 * (index + 1) + 1) % ( 2* RESOLUTION);
         // 永远是底部中心点开始的
         pointer.push(step);
-        pointer.push(RESOLUTION+1);// 底部中心点的在vertexs中的位置 即 1 + RESOLUTION
+        pointer.push(RESOLUTION+1);// 顶部中心点的在vertexs中的位置 即 1 + RESOLUTION
         pointer.push(step2);
     }
 
     //顶边
     for (let index = 0; index < RESOLUTION; index++) {
       const step = (2 * index + 2) % (2 * RESOLUTION);
-      const step2 = (2 * (index + 2)) % ( 2* RESOLUTION);
+      const step2 = (2 * (index + 2)) % (2 * RESOLUTION);
       // 永远是底部中心点开始的
       pointer.push(step);
-      pointer.push(RESOLUTION);// 底部中心点的在vertexs中的位置 即 1 + RESOLUTION
+      pointer.push(RESOLUTION);// 底部中心点的在vertexs中的位置 即 RESOLUTION
       pointer.push(step2);
-  }
-
-
+    }
+    
     vertexs = new Float32Array(vertexs);
-    colors = new Float32Array(colors);
     pointer = new Uint16Array(pointer);
-    return {vertexs, colors, pointer, len: pointer.length};
+    linePointer = new Uint16Array(linePointer);
+
+    return {vertexs, pointer, linePointer, len: pointer.length};
 }
