@@ -222,7 +222,7 @@ function calculatePoints() {
 
     let lPointer = [];
     //线条
-    for (let index = 0; index < RESOLUTION; index++) {
+    for (let index = 1; index <= RESOLUTION; index++) {
       //永远是第一个顶点开始的
       lPointer.push(0); // 顶部点的位置，在 0；
       lPointer.push(1 + (index % RESOLUTION));

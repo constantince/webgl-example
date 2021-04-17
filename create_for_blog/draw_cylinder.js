@@ -170,7 +170,7 @@ function main() {
     //绘制场景
     myinitMatrix(gl, program1, start);
     // 执行画线条的指令
-    gl.drawElements(gl.LINES, linePointer.length / 2, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.LINES, linePointer.length, gl.UNSIGNED_SHORT, 0);
   }
 
   // 指定清除canvas的颜色
@@ -220,18 +220,18 @@ function calculatePoints() {
 
     }
     let linePointer = [];
-    for (let index = 0; index < RESOLUTION * 2; index++) {
+    for (let index = 1; index <= RESOLUTION * 2; index = index + 2) {
       // 第一条线
       linePointer.push( 2 * RESOLUTION + 1); // 上表面中心
-      linePointer.push( 2 * index); // 上表面边上的一点
-      // 第二条线
-      linePointer.push( 2 * index); //上表面边上的一点
-      linePointer.push( 2 * index + 1) ;//下表面边上的一点
-      // 第三条线
-      linePointer.push( 2 * index + 1) ;//下表面边上的一点
+      linePointer.push(index); // 上表面边上的一点
+      // // 第二条线
+      linePointer.push(index); //上表面边上的一点
+      linePointer.push(index + 1) ;//下表面边上的一点
+      // // 第三条线
+      linePointer.push(index) ;//下表面边上的一点
       linePointer.push( 2 * RESOLUTION );// 下表面中心
+      
   }
-
     //底边
     for (let index = 0; index < RESOLUTION; index++) {
         const step = (2 * index + 1) % (2 * RESOLUTION);
@@ -251,7 +251,7 @@ function calculatePoints() {
       pointer.push(RESOLUTION);// 底部中心点的在vertexs中的位置 即 RESOLUTION
       pointer.push(step2);
     }
-    
+
     vertexs = new Float32Array(vertexs);
     pointer = new Uint16Array(pointer);
     linePointer = new Uint16Array(linePointer);
