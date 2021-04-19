@@ -125,6 +125,7 @@ var fieldOfViewRadians = degToRad(60);
 var modelXRotationRadians = degToRad(0);
 var modelYRotationRadians = degToRad(0);
 var then = 0;
+
 function create_matrix(gl, program, time) {
 
    // convert to seconds
