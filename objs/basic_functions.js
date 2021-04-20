@@ -174,3 +174,32 @@ function myInitBuffer(gl, program, data, name, size, type = false) {
         gl.enableVertexAttribArray(target);
     }
 }
+
+function translate16ColorToRGBA(f){
+	const sColor = f.toLowerCase();
+    const reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
+	if(sColor && reg.test(sColor)){
+		if(sColor.length === 4){
+			var sColorNew = "#";
+			for(var i=1; i<4; i+=1){
+				sColorNew += sColor.slice(i,i+1).concat(sColor.slice(i,i+1));	
+			}
+			sColor = sColorNew;
+		}
+		//处理六位的颜色值
+		var sColorChange = [];
+		for(var i=1; i<7; i+=2){
+			sColorChange.push(parseInt("0x"+sColor.slice(i,i+2)));	
+		}
+		return sColorChange.concat(1);
+	}else{
+		return sColor;	
+	}
+}
+
+function translateToWebglColor(color) { // #19a397
+    color = translate16ColorToRGBA(color);
+    console.log(color)
+    const r = [color[0] / 255, color[1] / 255, color[2] / 255, color[3]];
+    return r.join(',')
+}

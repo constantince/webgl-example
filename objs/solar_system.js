@@ -6,37 +6,13 @@ const mRADIUS = .2;
 // the radain of sun
 const sRADIUS = 3;
 
-function translate16ColorToRGBA(f){
-	const sColor = f.toLowerCase();
-    const reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
-	if(sColor && reg.test(sColor)){
-		if(sColor.length === 4){
-			var sColorNew = "#";
-			for(var i=1; i<4; i+=1){
-				sColorNew += sColor.slice(i,i+1).concat(sColor.slice(i,i+1));	
-			}
-			sColor = sColorNew;
-		}
-		//处理六位的颜色值
-		var sColorChange = [];
-		for(var i=1; i<7; i+=2){
-			sColorChange.push(parseInt("0x"+sColor.slice(i,i+2)));	
-		}
-		return sColorChange.concat(1);
-	}else{
-		return sColor;	
-	}
-}
-function translateToWebglColor(color) { // #19a397
-    color = translate16ColorToRGBA(color);
-    console.log(color)
-    const r = [color[0] / 255, color[1] / 255, color[2] / 255, color[3]];
-    return r.join(',')
-}
+const RESOLUTION = 50;
+const sunOrbitRadius = 10;
 
 const color_moon = translateToWebglColor('#89908f');
 const color_earth = translateToWebglColor('#3f51b5');
 const color_sun = translateToWebglColor('#ff5722');
+
 const vertex_earth = `#version 300 es
     in vec4 a_Position;
     uniform mat4 u_WorldMatrix;
@@ -86,6 +62,22 @@ const frag_sun = `#version 300 es
     }
 `;
 
+const orbit_vertex = `#version 300 es
+    in vec4 a_Position;
+    uniform mat4 u_WorldMatrix;
+    void main() {
+        gl_Position = u_WorldMatrix * a_Position;
+    }
+`;
+
+const orbit_frag = `#version 300 es
+    precision mediump float;
+    out vec4 outColor;
+    void main() {
+        outColor = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+`
+
 
 function main() {
     const canvas = document.getElementById("cube");
@@ -96,6 +88,8 @@ function main() {
     const program_earth = myInitShader(webgl2, vertex_earth, frag_earth);
     const program_moon = myInitShader(webgl2, vertex_moon, frag_moon);
     const program_sun = myInitShader(webgl2, vertex_sun, frag_sun);
+
+    const program_oribit = myInitShader(webgl2, orbit_vertex, orbit_frag);
 
     const {vertexPositionData, textureCoordData, normalData} = initBuffers(radius_number, radius_number, RADIUS);
     const point = new Uint16Array(createPointer(radius_number, radius_number));
@@ -108,7 +102,12 @@ function main() {
     const {vertexPositionData: sv, textureCoordData: st, normalData: sn} = initBuffers(radius_number, radius_number, sRADIUS);
     const sPoint = new Uint16Array(createPointer(radius_number, radius_number));
     const sVertex = new Float32Array(sv);
-    
+
+
+    const {vertex: sun_orbit_vertex, pointer: sun_orbit_pointer} = createOrbit(RESOLUTION, sunOrbitRadius);
+    const sunOrbitPoint = new Uint16Array(sun_orbit_pointer);
+    const sunOrbitVertex = new Float32Array(sun_orbit_vertex);
+    // console.log(sunOrbitPoint, sunOrbitVertex);
     // webgl2.useProgram(program_earth);
     
     // webgl2.useProgram(program_moon);
@@ -119,7 +118,6 @@ function main() {
 
     webgl2.enable(webgl2.DEPTH_TEST);
     webgl2.clearColor(0.0, 0.0, 0.0, 1.0);
-    let _position = 0;
     const tick = () => {
         let _angle = calculateAngle();
         let _angle_fast = calculateAngle(120);
@@ -128,6 +126,7 @@ function main() {
         webgl2.clear(webgl2.COLOR_BUFFER_BIT | webgl2.DEPTH_BUFFER_BIT);
         
         var sun_matrix = createSun(webgl2, program_sun, sVertex, sPoint, _angle, sPoint.length);
+        createSunOrbit(webgl2, program_oribit, sunOrbitVertex, sunOrbitPoint, sunOrbitPoint.length, sun_matrix);
         var translation_earth = moveTheEarth(webgl2, program_earth, vertex, point, _angle, point.length, sun_matrix);
         moveTheMoon(webgl2, program_moon, mVertex, mPoint, _angle_fast, mPoint.length, translation_earth);
         
@@ -196,7 +195,6 @@ function createPointer(latitudeBands, longitudeBands) {
 }
 
 function initMateix(gl, program, r, sun_matrix) {
-    const world = mat4.create();
     // mat4.identity(world);
     // mat4.perspective(world, glMatrix.toRadian(60), 1, 1, 200);
     
@@ -227,15 +225,6 @@ function initMateix(gl, program, r, sun_matrix) {
 }
 
 function mMatrix(gl, program, angle, translation_earth) {
-    // const world = mat4.create();
-    // mat4.identity(world);
-    // mat4.perspective(world, glMatrix.toRadian(60), 1, 1, 200);
-    
-    // const eyes = [0, 0, 4],
-    // target = [0,0,0],
-    // up = [0, 1, 0];
-    // const view = mat4.lookAt(mat4.create(), eyes, target, up);
-    // mat4.identity(view);
 
     const rotate = mat4.create();
     mat4.identity(rotate)
@@ -259,7 +248,7 @@ function sMatrix(gl, program, angle){
     mat4.identity(world);
     mat4.perspective(world, glMatrix.toRadian(60), 2, 1, 2000);
     
-    const eyes = [0, 0, 15],
+    const eyes = [0, 1, 15],
     target = [0,0,0],
     up = [0, 1, 0];
     const view = mat4.lookAt(mat4.create(), eyes, target, up);
@@ -327,4 +316,25 @@ function createSun(gl, program, vertex, point, _angle, len) {
     var translation = sMatrix(gl, program, _angle);
     gl.drawElements(gl.TRIANGLES, len, gl.UNSIGNED_SHORT, 0);
     return translation;
+}
+
+function createSunOrbit(gl, program, vertex, point, len, sun_matrix) {
+    gl.useProgram(program);
+    myInitBuffer(gl, program, vertex, 'a_Position', 3);
+    myInitBuffer(gl, program, point, undefined, undefined, gl.ELEMENT_ARRAY_BUFFER);
+    sMatrix(gl, program, 0, sun_matrix);
+    gl.drawElements(gl.LINE_LOOP, len, gl.UNSIGNED_SHORT, 0);
+}
+
+function createOrbit(resolution, radius) {
+    let vertex = [], pointer = [],
+    theta = (360 / resolution) * (Math.PI / 180);
+    for (let index = 0; index < resolution; index++) {
+        vertex.push(Math.sin(theta * index) * radius);
+        vertex.push(0);
+        vertex.push(Math.cos(theta * index) * radius);
+        pointer.push(index);
+        pointer.push((index + 1) % resolution);
+    }
+    return {vertex, pointer}
 }
