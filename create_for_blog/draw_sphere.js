@@ -72,6 +72,7 @@ function myinitMatrix(gl, program,start) {
     mat4.fromRotation(fM, glMatrix.toRadian(-30), [1, 0, 0]);
     mat4.rotateY(fM, fM, glMatrix.toRadian(start));
     // mat4.rotateZ(fM, fM, glMatrix.toRadian(start));
+    // mat4.rotateX(fM, fM, glMatrix.toRadian(start));
 
     // 赋值uniform
     const projectionMatrixLocation = gl.getUniformLocation(program, "u_ProjectionMatrix");
@@ -123,7 +124,7 @@ var FSHADER_SOURCE_LINE =`
   precision mediump float;
   varying vec4 v_Color;
   void main() {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }`
 
 function main() {
@@ -149,7 +150,7 @@ function main() {
   }
   
   
-  const {pointer, vertexs} = calculatePoints();
+  const {pointer, vertexs, linePointer} = calculatePoints();
   // 绘制圆柱体
   function drawSphere(start) {
     //切换程序
@@ -185,47 +186,58 @@ function main() {
     drawSphere(start);
     gl.disable(gl.POLYGON_OFFSET_FILL);
     // 为了方便，我们也换出紧贴表面的视觉引导线
-    // drawLine(start);
-    // requestAnimationFrame(tick);
+    drawLine(start);
+    requestAnimationFrame(tick);
   }
   
   tick();
 }
 
-const RADIUS = 1, LOG = LAT = 2;
-const theta = (360 / LOG) * (Math.PI / 180);
-const beta = (360 / LAT) * (Math.PI / 180);
+const RADIUS = 1, RESOLUTION = 30;
+const theta = (360 / RESOLUTION) * (Math.PI / 180);
+const beta = (360 / RESOLUTION) * (Math.PI / 180);
 //计算出圆体以及表面线条的各个点的位置
 function calculatePoints() {
-    let vertexs = [], pointer = [];
-    for (let index = 0; index <= LOG; index++) {
+    let vertexs = [], pointer = [], linePointer = [];
+     for (let index = 0; index <= RESOLUTION; index++) {
         const y = Math.cos(theta * index) * RADIUS;
         const d = Math.sin(theta * index) * RADIUS;
-        for (let index1 = 0; index1 <= LAT; index1++) {
+        for (let index1 = 0; index1 <= RESOLUTION; index1++) {
             const x = Math.cos(beta * index1) * d;
             const z = Math.sin(beta * index1) * d;
             vertexs.push(x);
             vertexs.push(y);
             vertexs.push(z);
         }
-    }
+     }
 
-    for(var latNumber = 0; latNumber < LOG; latNumber ++)
+    
+
+    for(var index = 0; index < Math.pow(RESOLUTION, 2); index ++)
     {
-        for(var longNumber = 0; longNumber < LAT; longNumber ++)
-        {
-            var first = (latNumber * (LOG + 1)) + longNumber;
-            var second = first + LOG + 1;
-            pointer.push(first);
-            pointer.push(second);
-            pointer.push(first + 1);
-            pointer.push(second);
-            pointer.push(second + 1);
-            pointer.push(first + 1);
-        }
+
+            pointer.push(index);
+            pointer.push(index + RESOLUTION + 1);
+            pointer.push(index + 1);
+
+            pointer.push(index + 1);
+            pointer.push(index + RESOLUTION + 1);
+            pointer.push(index + RESOLUTION + 2);
+
+            linePointer.push(index);
+            linePointer.push(index + 1);
+
+            linePointer.push(index);
+            linePointer.push(index + RESOLUTION + 1);
+
+
     }
 
-    console.log(vertexs, pointer);
-    // vertexs = [];
-    return {vertexs, pointer};
+    console.log(vertexs, pointer, linePointer);
+    
+    return {
+        vertexs : new Float32Array( vertexs ),
+        pointer: new Uint16Array(pointer),
+        linePointer: new Uint16Array(linePointer)
+    };
 }
