@@ -93,7 +93,7 @@ var VSHADER_SOURCE = `
   void main() {
     gl_Position = u_ProjectionMatrix * u_WorldMatrix * u_RoateMatrix * a_Position;
     v_Color = a_Color;
-  }`
+}`;
 
 // 片元着色器
 var FSHADER_SOURCE =`
@@ -101,7 +101,7 @@ var FSHADER_SOURCE =`
   varying vec4 v_Color;
   void main() {
     gl_FragColor = v_Color;
-  }`
+}`;
 
 function main() {
   // Retrieve <canvas> element

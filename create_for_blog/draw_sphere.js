@@ -179,7 +179,7 @@ function main() {
   let start = 0, speed = 0.5;
   var tick = function() {
     start += speed;
-       // 清除canvas
+       // 紧贴表面偏移量，避免两个左边相同的元素互相影响。
     gl.enable(gl.POLYGON_OFFSET_FILL);
 	gl.polygonOffset(1.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -200,10 +200,14 @@ const beta = (360 / RESOLUTION) * (Math.PI / 180);
 function calculatePoints() {
     let vertexs = [], pointer = [], linePointer = [];
      for (let index = 0; index <= RESOLUTION; index++) {
+         // 同等高度的Y值
         const y = Math.cos(theta * index) * RADIUS;
+        // 底边作为斜边的长度
         const d = Math.sin(theta * index) * RADIUS;
         for (let index1 = 0; index1 <= RESOLUTION; index1++) {
+            // 斜边的余弦即是x轴的距离
             const x = Math.cos(beta * index1) * d;
+            // 斜边的正弦即是Z轴的距离
             const z = Math.sin(beta * index1) * d;
             vertexs.push(x);
             vertexs.push(y);
@@ -211,22 +215,24 @@ function calculatePoints() {
         }
      }
 
-    
-
+    /* 计算出顶点的位置为 [0, 1,..... 一个循环之后, RESOLUTION, RESOLUTION + 1]
+     我们需要连接的是 0, 1, RESOLUTION 顶点的位置拼凑成一个三角形
+    */
     for(var index = 0; index < Math.pow(RESOLUTION, 2); index ++)
     {
+            pointer.push(index); // 本行第一个
+            pointer.push(index + RESOLUTION + 1); // 下一行第一个
+            pointer.push(index + 1); // 本行第二个
 
-            pointer.push(index);
-            pointer.push(index + RESOLUTION + 1);
-            pointer.push(index + 1);
+            pointer.push(index + 1); // 本行第二个
+            pointer.push(index + RESOLUTION + 1); // 下一行第一个
+            pointer.push(index + RESOLUTION + 2); // 下一行第二个
 
-            pointer.push(index + 1);
-            pointer.push(index + RESOLUTION + 1);
-            pointer.push(index + RESOLUTION + 2);
+            //到此，一个四边形被拼凑成功
 
+            // 划线只需要沿着精度和纬度连接每个点即可
             linePointer.push(index);
             linePointer.push(index + 1);
-
             linePointer.push(index);
             linePointer.push(index + RESOLUTION + 1);
 
