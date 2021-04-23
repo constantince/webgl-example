@@ -167,7 +167,7 @@ function myInitBuffer(gl, program, data, name, size, type = false) {
     if( !type ) {
         const target = gl.getAttribLocation(program, name);
         if (target < 0) {
-            console.log('Failed to get the storage location of ' + attribute);
+            console.log('Failed to get the storage location of ' + name);
             return false;
           }
         gl.vertexAttribPointer(target, size, gl.FLOAT, false, 0, 0);
