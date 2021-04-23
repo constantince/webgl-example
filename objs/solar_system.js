@@ -34,7 +34,7 @@ const vertex_earth = `#version 300 es
         vec4 base_Color = vec4(${color_earth});
         vec3 diffuse = base_Color.rgb * u_LightColor * nDot;
         vec3 env = u_EnvColor * base_Color.rgb;
-        v_Color = vec4(diffuse, 1.0);
+        v_Color = vec4(diffuse + env, 1.0);
     }
 `;
 
@@ -148,7 +148,7 @@ function main() {
         var translation_earth = moveTheEarth(webgl2, program_earth, vertex, point, normals, _angle, point.length, sun_matrix);
         moveTheMoon(webgl2, program_moon, mVertex, mPoint, _angle_fast, mPoint.length, translation_earth);
         
-        // requestAnimationFrame(tick);
+        requestAnimationFrame(tick);
     }
 
     tick();
@@ -236,8 +236,8 @@ function initMateix(gl, program, r, sun_matrix) {
     // create normal matrix
     const normal = mat4.create();
     mat4.identity(normal);
-    // mat4.mul(normal, normal, sun_matrix);
-    // mat4.mul(normal, normal, rotate);
+    mat4.mul(normal, normal, rotate);
+
 
     const worldMateixLocation = gl.getUniformLocation(program, "u_WorldMatrix");
     const normalMatrixLocation = gl.getUniformLocation(program, "u_NormalMatrix");
@@ -371,10 +371,10 @@ function createLightToEarth(gl, program) {
 
     // set light's color
     gl.uniform3f(u_LightColor, 1.0, 1.0, 1.0);
-    gl.uniform3f(u_EnvColor, 0.5, 0.5, 0.5);
+    gl.uniform3f(u_EnvColor, 0.1, 0.1, 0.1);
     // set point light direction;
     // const LP = vec3.create();
     // vec3.normalize(LP, [0.0, 0.0, 0.0]);
-    gl.uniform3f(u_LightPosition, 0.0, 0.0, 0.0);
+    gl.uniform3f(u_LightPosition, -50.0, -10.0, 0.0);
 
 }
