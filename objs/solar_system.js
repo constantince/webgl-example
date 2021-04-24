@@ -4,7 +4,7 @@ const RADIUS = .4;
 // the radain of moon
 const mRADIUS = .2;
 // the radain of sun
-const sRADIUS = 3;
+const sRADIUS = 2;
 
 const RESOLUTION = 50;
 const sunOrbitRadius = 10;
@@ -12,54 +12,84 @@ const sunOrbitRadius = 10;
 const color_moon = translateToWebglColor('#89908f');
 const color_earth = translateToWebglColor('#3f51b5');
 const color_sun = translateToWebglColor('#ff5722');
-
+// the origainal light position of sorlar system;
+var u_eartch = vec3.fromValues(-50.0, 10.0, 0.0);
+var u_moon = vec3.fromValues(-50.0, 10.0, 0.0);
 const vertex_earth = `#version 300 es
     in vec4 a_Position;
     uniform mat4 u_WorldMatrix;
 
     // light
-    uniform vec3 u_LightColor;
-    uniform vec3 u_LightPosition;
     in vec4 u_Normals;
     uniform mat4 u_NormalMatrix;
-    uniform vec3 u_EnvColor;
-    out vec4 v_Color;
+
+    out vec4 v_WorldPosition;
+    out vec3 v_Normal; 
     void main() {
+
         gl_Position = u_WorldMatrix * a_Position;
         // light setting;
-        vec3 normal = normalize(vec3(u_NormalMatrix * u_Normals));
-        vec4 worldPosition = u_NormalMatrix * a_Position;
-        vec3 lightDirection = normalize(u_LightPosition - worldPosition.xyz);
-        float nDot = max(dot(normal, lightDirection), 0.0);
-        vec4 base_Color = vec4(${color_earth});
-        vec3 diffuse = base_Color.rgb * u_LightColor * nDot;
-        vec3 env = u_EnvColor * base_Color.rgb;
-        v_Color = vec4(diffuse + env, 1.0);
+        v_Normal = normalize(vec3(u_NormalMatrix * u_Normals));
+        v_WorldPosition = u_NormalMatrix * a_Position;
     }
 `;
 
 const frag_earth = `#version 300 es
     precision mediump float;
+    in vec3 v_Normal;
+    in vec4 v_WorldPosition;
+
+    uniform vec3 u_EnvColor;
+    uniform vec3 u_LightColor;
+    uniform vec3 u_LightPosition;
+
     out vec4 outColor;
-    in vec4 v_Color;
     void main() {
-        outColor = v_Color;
+
+        vec3 lightDirection = normalize(u_LightPosition - v_WorldPosition.xyz);
+        float nDot = max(dot(v_Normal, lightDirection), 0.0);
+        vec4 base_Color = vec4(${color_earth});
+        vec3 diffuse = base_Color.rgb * u_LightColor * nDot;
+        vec3 env = u_EnvColor * base_Color.rgb;
+        outColor = vec4(diffuse + env, 1.0);
     }
 `;
 
 const vertex_moon = `#version 300 es
     in vec4 a_Position;
     uniform mat4 u_WorldMatrix;
+    uniform mat4 u_NormalMatrix;
+    in vec4 a_Normal;
+
+    out vec3 v_Normal;
+    out vec4 v_WorldPosition;
+    
     void main() {
         gl_Position = u_WorldMatrix * a_Position;
+        v_WorldPosition = u_NormalMatrix * a_Position;
+        v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));
+
     }
 `;
 
 const frag_moon = `#version 300 es
     precision mediump float;
     out vec4 outColor;
+
+    in vec4 v_WorldPosition;
+    in vec3 v_Normal;
+
+    uniform vec3 u_LightPosition;
+    uniform vec3 u_LightColor;
+    uniform vec3 u_Env;
+
     void main() {
-        outColor = vec4(${color_moon});
+        vec4 base = vec4(${color_moon});
+        vec3 u_LightDirection = normalize(u_LightPosition - v_WorldPosition.xyz);
+        float nDot = max(dot(u_LightDirection, v_Normal), 0.0);
+        vec3 diffuse = u_LightColor * base.rgb * nDot;
+        vec3 env = u_Env * base.rgb;
+        outColor = vec4(diffuse + env, 1.0);
     }
 `;
 
@@ -116,10 +146,12 @@ function main() {
     const {vertexPositionData: mv, textureCoordData: mt, normalData: mn} = initBuffers(radius_number, radius_number, mRADIUS);
     const mPoint = new Uint16Array(createPointer(radius_number, radius_number));
     const mVertex = new Float32Array(mv);
+    const moonNormals = new Float32Array(mn);
 
     const {vertexPositionData: sv, textureCoordData: st, normalData: sn} = initBuffers(radius_number, radius_number, sRADIUS);
     const sPoint = new Uint16Array(createPointer(radius_number, radius_number));
     const sVertex = new Float32Array(sv);
+   
 
 
     const {vertex: sun_orbit_vertex, pointer: sun_orbit_pointer} = createOrbit(RESOLUTION, sunOrbitRadius);
@@ -146,7 +178,7 @@ function main() {
         var sun_matrix = createSun(webgl2, program_sun, sVertex, sPoint, _angle, sPoint.length);
         createSunOrbit(webgl2, program_oribit, sunOrbitVertex, sunOrbitPoint, sunOrbitPoint.length, sun_matrix);
         var translation_earth = moveTheEarth(webgl2, program_earth, vertex, point, normals, _angle, point.length, sun_matrix);
-        moveTheMoon(webgl2, program_moon, mVertex, mPoint, _angle_fast, mPoint.length, translation_earth);
+        moveTheMoon(webgl2, program_moon, mVertex, mPoint, moonNormals, _angle_fast, mPoint.length, translation_earth);
         
         requestAnimationFrame(tick);
     }
@@ -221,8 +253,8 @@ function initMateix(gl, program, r, sun_matrix) {
     const rotate = mat4.create();
     mat4.identity(rotate)
     mat4.rotateY(rotate, rotate, glMatrix.toRadian(r));
-    mat4.rotateZ(rotate, rotate, glMatrix.toRadian(r));
-    mat4.rotateX(rotate, rotate, glMatrix.toRadian(r));
+    // mat4.rotateZ(rotate, rotate, glMatrix.toRadian(r));
+    // mat4.rotateX(rotate, rotate, glMatrix.toRadian(r));
 
     
     
@@ -243,7 +275,7 @@ function initMateix(gl, program, r, sun_matrix) {
     const normalMatrixLocation = gl.getUniformLocation(program, "u_NormalMatrix");
     gl.uniformMatrix4fv(worldMateixLocation, false, sun_matrix);
     gl.uniformMatrix4fv(normalMatrixLocation, false, normal);
-    return sun_matrix;
+    return {sun_matrix, normal};
 }
 
 function mMatrix(gl, program, angle, translation_earth) {
@@ -252,17 +284,30 @@ function mMatrix(gl, program, angle, translation_earth) {
     mat4.identity(rotate)
     mat4.rotateY(rotate, rotate, glMatrix.toRadian(angle));
 
+    
+
     const translation = mat4.create();
     mat4.identity(translation)
     mat4.translate(translation, translation, [1, 0, 0]);
 
+    // create normal matrix
+    const normal = mat4.create();
+    mat4.identity(normal);
+    mat4.mul(normal, rotate, translation_earth.normal);
+
     
-    mat4.mul(translation_earth, translation_earth, rotate);
-    mat4.mul(translation_earth, translation_earth, translation);
+    mat4.mul(translation_earth.sun_matrix, translation_earth.sun_matrix, rotate);
+    mat4.mul(translation_earth.sun_matrix, translation_earth.sun_matrix, translation);
     // mat4.mul(world, world, rotate);
 
+     
+    //  mat4.mul(normal, normal, translation);
+    //  mat4.invert(normal, normal);
+
     const worldMateixLocation = gl.getUniformLocation(program, "u_WorldMatrix");
-    gl.uniformMatrix4fv(worldMateixLocation, false, translation_earth);
+    const normalMatrixLocation = gl.getUniformLocation(program, "u_NormalMatrix");
+    gl.uniformMatrix4fv(normalMatrixLocation, false, normal);
+    gl.uniformMatrix4fv(worldMateixLocation, false, translation_earth.sun_matrix);
 }
 
 function sMatrix(gl, program, angle){
@@ -270,7 +315,7 @@ function sMatrix(gl, program, angle){
     mat4.identity(world);
     mat4.perspective(world, glMatrix.toRadian(60), 2, 1, 2000);
     
-    const eyes = [0, 1, 15],
+    const eyes = [0, 2, 15],
     target = [0,0,0],
     up = [0, 1, 0];
     const view = mat4.lookAt(mat4.create(), eyes, target, up);
@@ -325,10 +370,12 @@ function moveTheEarth(gl, program, vertex, point, normals, _angle, len, sun_matr
     return translation;
 }
 
-function moveTheMoon(gl, program, mVertex, mPoint, _angle, len, translation_earth) {
+function moveTheMoon(gl, program, mVertex, mPoint, normals, _angle, len, translation_earth) {
     gl.useProgram(program);
     myInitBuffer(gl, program, mVertex, 'a_Position', 3);
     myInitBuffer(gl, program, mPoint, undefined, undefined, gl.ELEMENT_ARRAY_BUFFER);
+    myInitBuffer(gl, program, normals, 'a_Normal', 3);
+    createLightToMoon(gl, program)
     mMatrix(gl, program, _angle, translation_earth);
     gl.drawElements(gl.TRIANGLES, len, gl.UNSIGNED_SHORT, 0);
 }
@@ -375,6 +422,21 @@ function createLightToEarth(gl, program) {
     // set point light direction;
     // const LP = vec3.create();
     // vec3.normalize(LP, [0.0, 0.0, 0.0]);
-    gl.uniform3f(u_LightPosition, -50.0, -10.0, 0.0);
+    gl.uniform3fv(u_LightPosition, u_eartch);
+
+}
+
+function createLightToMoon(gl, program) {
+    const u_LightColor = gl.getUniformLocation(program, "u_LightColor");
+    const u_LightPosition = gl.getUniformLocation(program, "u_LightPosition");
+    const u_EnvColor = gl.getUniformLocation(program, 'u_Env');
+
+    // set light's color
+    gl.uniform3f(u_LightColor, 1.0, 1.0, 1.0);
+    gl.uniform3f(u_EnvColor, 0.3, 0.3, 0.3);
+    // set point light direction;
+    // const LP = vec3.create();
+    // vec3.normalize(LP, [0.0, 0.0, 0.0]);
+    gl.uniform3fv(u_LightPosition, u_moon);
 
 }
