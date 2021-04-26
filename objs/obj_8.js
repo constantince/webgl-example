@@ -270,7 +270,7 @@ function main() {
     }
 
     var M = new Matrix4();
-    M.setPerspective(30, 1, 1, 100).lookAt(10, 3, 7, 0, 0, 0, 0, 1, 0);
+    M.setPerspective(30, 2, 1, 100).lookAt(10, 3, 7, 0, 0, 0, 0, 1, 0);
     const u_ViewMatrixModel = webgl.getUniformLocation(webgl.program, 'u_ViewMatrixModel');
     const u_ReverseMatrixModel = webgl.getUniformLocation(webgl.program, "u_ReverseMatrixModel");
     let speed = SPEED, start = 0;
