@@ -4,7 +4,7 @@ const RADIUS = .4;
 // the radain of moon
 const mRADIUS = .2;
 // the radain of sun
-const sRADIUS = 3;
+const sRADIUS = 2;
 
 const RESOLUTION = 50;
 const sunOrbitRadius = 10;
@@ -122,6 +122,22 @@ const frag_moon = `#version 300 es
     }
 `;
 
+/**
+ * 
+ * 
+ * void main()
+{             
+    const float gamma = 2.2;
+    vec3 hdrColor = texture(hdrBuffer, TexCoords).rgb;
+    // Reinhard色调映射
+    vec3 mapped = hdrColor / (hdrColor + vec3(1.0));
+    // Gamma校正
+    mapped = pow(mapped, vec3(1.0 / gamma));
+    color = vec4(mapped, 1.0);
+}   
+
+ */
+
 const vertex_sun = `#version 300 es
     in vec4 a_Position;
     uniform mat4 u_WorldMatrix;
@@ -140,9 +156,19 @@ const frag_sun = `#version 300 es
     uniform sampler2D u_Sampler;
     in vec2 v_TextCood;
     void main() {
-        vec4 ambient = vec4(1.0, 1.0, 1.0, 1.0);
+        const float gamma = 1.7;
+        vec4 ambient = vec4(10.0, 1.0, 1.0, 1.0);
         vec4 texColor = texture(u_Sampler, v_TextCood);
-        outColor = vec4(ambient.rgb * texColor.rgb, texColor.a);
+
+        vec3 hdrColor = ambient.rgb * texColor.rgb;
+
+        // Reinhard色调映射
+        vec3 mapped = hdrColor / (hdrColor + vec3(1.0));
+        // Gamma校正
+        mapped = pow(mapped, vec3(1.0 / gamma));
+        // color = vec4(mapped, 1.0);
+
+        outColor = vec4(mapped, 1.0);
     }
 `;
 
@@ -229,22 +255,23 @@ function main() {
     // 地球绕太阳旋转一周365s 每秒旋转 365 / 360
     const a1 = 360 / 100;
     // 地球自转一周 需要1s 每秒旋转 1 / 360
-    const a2 = 360 / 3;
+    const a2 = 360 / 4;
     // 月球自转一周 27.32 / 360
-    const a3 = 270
+    const a3 = 360 / 20;
 
     const tick = () => {
         let diqiugongzhuan = calculateAngle(a1);
-        let ziqiuzizhuan = calculateAngle(a2);
-        let _earth_self_rotate = calculateAngle(24);
+        let diqiuzizhuan = calculateAngle(a2);
+        let sunzizhuan = calculateAngle(2)
+        let yueqiugongzhuan = calculateAngle(a3);
         // console.log(_angle)
         // _position = calculatePosition(_position);
         webgl2.clear(webgl2.COLOR_BUFFER_BIT | webgl2.DEPTH_BUFFER_BIT);
         
-        var sun_matrix = createSun(webgl2, program_sun, sVertex, sPoint, sTexture, diqiugongzhuan, sPoint.length, sun_texture);
-        createSunOrbit(webgl2, program_oribit, sunOrbitVertex, sunOrbitPoint, sunOrbitPoint.length, sun_matrix);
-        var translation_earth = moveTheEarth(webgl2, program_earth, vertex, point, normals, texture_earth, diqiugongzhuan, ziqiuzizhuan, point.length, sun_matrix, earth_texture);
-        moveTheMoon(webgl2, program_moon, mVertex, mPoint, moonNormals, mTexture, a3, mPoint.length, translation_earth, moon_texture);
+        var sun_matrix = createSun(webgl2, program_sun, sVertex, sPoint, sTexture, sunzizhuan, sPoint.length, sun_texture);
+        // createSunOrbit(webgl2, program_oribit, sunOrbitVertex, sunOrbitPoint, sunOrbitPoint.length, sun_matrix);
+        var translation_earth = moveTheEarth(webgl2, program_earth, vertex, point, normals, texture_earth, diqiugongzhuan, diqiuzizhuan, point.length, sun_matrix, earth_texture);
+        moveTheMoon(webgl2, program_moon, mVertex, mPoint, moonNormals, mTexture, yueqiugongzhuan, mPoint.length, translation_earth, moon_texture);
         
         requestAnimationFrame(tick);
     }
@@ -324,16 +351,18 @@ function initMateix(gl, program, gz, zz, sun_matrix) {
     //公转
     const gongzhuan = mat4.mul(mat4.create(), rotate, translation);
 
-    const rotate1 = mat4.create();
-    mat4.identity(rotate1)
-    mat4.rotateY(rotate1, rotate1, glMatrix.toRadian(zz));
-
     // 自转
-    // const zizhuan = mat4.mul(mat4.create(), rotate1);
+    const zizhuan = mat4.create();
+    mat4.identity(zizhuan)
+    mat4.rotateY(zizhuan, zizhuan, glMatrix.toRadian(zz));
+
+    
+    // const zizhuan = mat4.mul(mat4.create(), zizhuan);
     
     // mat4.mul(sun_matrix, sun_matrix, translation);
     mat4.mul(sun_matrix, sun_matrix, gongzhuan);
-    mat4.mul(sun_matrix, sun_matrix, rotate1);
+    const moon_matrix = mat4.copy(mat4.create(), sun_matrix);
+    mat4.mul(sun_matrix, sun_matrix, zizhuan);
 
 
     // const u  = mat4.copy(mat4.create(), sun_matrix);
@@ -344,7 +373,7 @@ function initMateix(gl, program, gz, zz, sun_matrix) {
     // create normal matrix
     const normal = mat4.create();
     mat4.identity(normal);
-    mat4.mul(normal, normal, rotate1);
+    mat4.mul(normal, normal, zizhuan);
 
 
     const worldMateixLocation = gl.getUniformLocation(program, "u_WorldMatrix");
@@ -352,8 +381,7 @@ function initMateix(gl, program, gz, zz, sun_matrix) {
     gl.uniformMatrix4fv(worldMateixLocation, false, sun_matrix);
     gl.uniformMatrix4fv(normalMatrixLocation, false, normal);
 
-    // sun_matrix = u;
-    return {sun_matrix, normal};
+    return {moon_matrix, normal};
 }
 
 function mMatrix(gl, program, angle, translation_earth) {
@@ -362,30 +390,35 @@ function mMatrix(gl, program, angle, translation_earth) {
     mat4.identity(rotate)
     mat4.rotateY(rotate, rotate, glMatrix.toRadian(angle));
 
-    
-
     const translation = mat4.create();
     mat4.identity(translation)
     mat4.translate(translation, translation, [1, 0, 0]);
 
-    // create normal matrix
-    const normal = mat4.create();
-    mat4.identity(normal);
-    mat4.mul(normal, rotate, translation_earth.normal);
-
     
-    mat4.mul(translation_earth.sun_matrix, translation_earth.sun_matrix, rotate);
-    mat4.mul(translation_earth.sun_matrix, translation_earth.sun_matrix, translation);
+
+    // 公转
+    const gongzhuan = mat4.mul(mat4.create(), translation, rotate);
+
+    // mat4.invert(gongzhuan, gongzhuan, rotate);
+    
+    mat4.mul(translation_earth.moon_matrix, translation_earth.moon_matrix, gongzhuan);
+    // mat4.mul(translation_earth.sun_matrix, translation_earth.sun_matrix, translation);
     // mat4.mul(world, world, rotate);
 
      
     //  mat4.mul(normal, normal, translation);
     //  mat4.invert(normal, normal);
 
+    // create normal matrix
+    const normal = mat4.create();
+    mat4.identity(normal);
+    mat4.mul(normal, normal, rotate);
+    // mat4.invert(normal, normal);
+
     const worldMateixLocation = gl.getUniformLocation(program, "u_WorldMatrix");
     const normalMatrixLocation = gl.getUniformLocation(program, "u_NormalMatrix");
     gl.uniformMatrix4fv(normalMatrixLocation, false, normal);
-    gl.uniformMatrix4fv(worldMateixLocation, false, translation_earth.sun_matrix);
+    gl.uniformMatrix4fv(worldMateixLocation, false, translation_earth.moon_matrix);
 }
 
 function sMatrix(gl, program, angle){
@@ -404,15 +437,18 @@ function sMatrix(gl, program, angle){
 
     const rotate = mat4.create();
     mat4.identity(rotate)
-    mat4.rotateY(rotate, rotate, glMatrix.toRadian(0));
-
+    mat4.rotateY(rotate, rotate, glMatrix.toRadian(angle));
+    
     mat4.mul(world, world, view);
-    mat4.mul(world, world, rotate);
     mat4.mul(world, world, translation);
+    // 地球公转 不要收太阳自转影响
+    const earth_matrix_initialization = mat4.copy(mat4.create(), world);
+    mat4.mul(world, world, rotate);
+    
 
     const worldMateixLocation = gl.getUniformLocation(program, "u_WorldMatrix");
     gl.uniformMatrix4fv(worldMateixLocation, false, world);
-    return world;
+    return earth_matrix_initialization;
 }
 
 let perPosition = .05, now = Date.now();
@@ -534,7 +570,7 @@ function createLightToMoon(gl, program) {
 
     // set light's color
     gl.uniform3f(u_LightColor, 1.0, 1.0, 1.0);
-    gl.uniform3f(u_EnvColor, 0.3, 0.3, 0.3);
+    gl.uniform3f(u_EnvColor, 0, 0, 0);
     // set point light direction;
     // const LP = vec3.create();
     // vec3.normalize(LP, [0.0, 0.0, 0.0]);
