@@ -503,7 +503,7 @@ function moveTheMoon(gl, program, mVertex, mPoint, normals, texture, _angle, len
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, moon_texture);
 
-    createLightToMoon(gl, program)
+    createLightToMoon(gl, program);
     mMatrix(gl, program, _angle, translation_earth);
     gl.drawElements(gl.TRIANGLES, len, gl.UNSIGNED_SHORT, 0);
 }

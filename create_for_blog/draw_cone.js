@@ -193,7 +193,7 @@ function main() {
 //计算出圆锥体的各个点的位置
 function calculatePoints() {
     const HEIGHT = 2.5,
-    TOP = [0, HEIGHT, 0], RADIUS = 1, RESOLUTION = 40, BOTTOM = [0, 0, 0],
+    TOP = [0, HEIGHT, 0], RADIUS = 1, RESOLUTION = 15, BOTTOM = [0, 0, 0],
     theta = 360 / RESOLUTION * Math.PI / 180;
     let vertexs = [];
     for (let index = 0; index < RESOLUTION; index++) {
